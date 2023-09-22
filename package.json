@@ -1,0 +1,67 @@
+{
+    "name": "webchat",
+    "version": "0.1.0",
+    "description": "Browser chat application build on the UniverseAI Protocol",
+    "private": false,
+    "scripts": {
+        "build": "rm -rf ./dist/* ./build && mkdir -p dist && npm run tsc && npm run build-script && npm run build-app",
+        "release": "rm -rf ./relese/* ./build && mkdir -p relese && npm run tsc && npm run build-script && npm run build-app-release",
+        "tsc": "./node_modules/.bin/tsc",
+        "build-script": "./node_modules/.bin/browserify --s module -i ./node_modules/universeai/build/src/datastreamer/FileStreamWriter.js -i ./node_modules/universeai/build/src/datastreamer/FileStreamReader.js -i sqlite3 -i postgresql-client ./build/WebChat.js -o ./build/WebChat-browser.js",
+        "build-app": "webpack -c ./webpack.config.js && cp ./src/index.html ./src/favicon.ico ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./dist/",
+        "build-app-release": "webpack -c ./webpack.config.release.js && cp ./src/index.html ./src/favicon.ico ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./release/"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/universe-ai/webchat"
+    },
+    "author": "The UniverseAI Foundation",
+    "bugs": {
+        "url": "https://github.com/universe-ai/webchat/issues"
+    },
+    "homepage": "https://universe.ai",
+    "devDependencies": {
+        "@riotjs/compiler": "^6.1.3",
+        "@riotjs/webpack-loader": "^6.0.0",
+        "@tsconfig/node14": "^1.0.1",
+        "@types/blake2b": "^2.1.0",
+        "@types/chai": "^4.3.1",
+        "@types/libsodium-wrappers": "^0.7.9",
+        "@types/mocha": "^9.1.1",
+        "@types/node": "^14.17.21",
+        "browserify": "^17.0.0",
+        "buffer": "^6.0.3",
+        "chai": "^4.3.6",
+        "crypto-browserify": "^3.12.0",
+        "css-loader": "^6.7.1",
+        "mini-css-extract-plugin": "^2.6.0",
+        "mocha": "^10.0.0",
+        "path-browserify": "^1.0.1",
+        "postcss": "^8.4.12",
+        "postcss-loader": "^6.2.1",
+        "regenerator-runtime": "^0.13.9",
+        "riot": "^6.1.2",
+        "stream-browserify": "^3.0.0",
+        "tailwindcss": "^3.0.23",
+        "ts-node": "^9.1.1",
+        "typedoc": "^0.22.15",
+        "typedoc-plugin-markdown": "^3.11.0",
+        "typescript": "^4.4.3",
+        "webpack": "^5.70.0",
+        "webpack-cli": "^4.9.2",
+        "webworkify": "^1.5.0"
+    },
+    "dependencies": {
+        "blake2b": "^2.1.4",
+        "eventemitter3": "^4.0.7",
+        "libsodium-wrappers": "^0.7.9",
+        "minidenticons": "^4.2.0",
+        "pocket-console": "0.5.0",
+        "pocket-messaging": "3.0.0",
+        "pocket-sockets": "2.0.2",
+        "sql.js": "^1.8.0",
+        "tweetnacl": "^1.0.3",
+        "universeai": "0.6.5",
+        "web-worker": "^1.2.0"
+    }
+}
