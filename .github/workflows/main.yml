@@ -1,0 +1,67 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code AND MORE
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: CI
+
+on:
+  push:
+    tags:        
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:   
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Checkout dependencies
+      uses: actions/checkout@v3
+      with:
+        repository: universe-ai/universe
+        token: ${{ secrets.GH_PAT }}
+        path: universe
+        
+    - name: Build dependencies
+      run: |
+        ls -lhat .
+        cd universe
+        npm i
+        npm run c
+    
+    - uses: actions/checkout@v3
+      with:
+        path: webchat     
+    
+    - name: Build
+      run: |
+        ls -lhat .
+        cd webchat
+        ls -lhat .
+        npm i
+        npm run bebop
+        npm run c        
+        cp ../universe/src/datamodel/decoder/thread.js ./build/universe/src/datamodel/decoder/.        
+        npm run browser
+        cp ./build/browser/Chat.js ./src/.
+        npm run build
+        npm run release
+        cp -r ./src/index.html ./dist
+        mv ./dist ./webchat
+        tar czvf webchat.tar.xz ./webchat
+          
+    - name: Release
+      uses: fnkr/github-action-ghr@v1
+      if: ${{ github.ref_type == 'tag' }}
+      env:        
+        GHR_PATH: webchat/webchat.tar.xz
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
