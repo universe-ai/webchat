@@ -11,10 +11,15 @@ import {
     Universe,
 } from "universeai";
 
+import {
+    PresenceController,
+} from "./PresenceController";
+
 export default {
     BrowserUtil,
     BrowserFileStreamReader,
     Service,
     Universe,
     ParseUtil,
+    PresenceController,
 }
