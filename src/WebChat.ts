@@ -13,7 +13,7 @@ import {
 
 import {
     PresenceController,
-} from "./PresenceController";
+} from "./controllers/PresenceController";
 
 export default {
     BrowserUtil,
