@@ -7,7 +7,7 @@
         "build": "rm -rf ./dist/* ./build && mkdir -p dist && npm run tsc && npm run build-script && npm run build-app",
         "release": "rm -rf ./relese/* ./build && mkdir -p relese && npm run tsc && npm run build-script && npm run build-app-release",
         "tsc": "./node_modules/.bin/tsc",
-        "build-script": "./node_modules/.bin/browserify --s module -i ./node_modules/universeai/build/src/datastreamer/FileStreamWriter.js -i ./node_modules/universeai/build/src/datastreamer/FileStreamReader.js -i sqlite3 -i postgresql-client ./build/WebChat.js -o ./build/WebChat-browser.js",
+        "build-script": "./node_modules/.bin/browserify --s module -i ./node_modules/universeai/build/src/datastreamer/FileStreamWriter.js -i ./node_modules/universeai/build/src/datastreamer/FileStreamReader.js -i sqlite3 -i postgresql-client ./build/Globals.js -o ./build/Globals-browser.js",
         "build-app": "webpack -c ./webpack.config.js && cp ./src/index.html ./src/favicon.ico ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./dist/",
         "build-app-release": "webpack -c ./webpack.config.release.js && cp ./src/index.html ./src/favicon.ico ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./release/"
     },

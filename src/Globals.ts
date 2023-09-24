@@ -1,5 +1,5 @@
 /**
- * Globals and helper class.
+ * Export of globals.
  *
  */
 

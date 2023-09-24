@@ -1,4 +1,4 @@
-import Globals from "../build/WebChat-browser.js";
+import Globals from "../build/Globals-browser.js";
 
 import { minidenticon } from 'minidenticons'
 
