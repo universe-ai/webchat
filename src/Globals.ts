@@ -13,7 +13,9 @@ import {
 
 import {
     PresenceController,
-} from "./controllers/PresenceController";
+    ChannelsController,
+    ChannelController,
+} from "./controllers";
 
 export default {
     BrowserUtil,
@@ -22,4 +24,6 @@ export default {
     Universe,
     ParseUtil,
     PresenceController,
+    ChannelsController,
+    ChannelController,
 }

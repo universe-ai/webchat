@@ -4,6 +4,11 @@ import {
     TransformerItem,
 } from "universeai";
 
+import {
+    Controller,
+    ControllerParams,
+} from "./Controller";
+
 type PresenceState = {
     controller: PresenceController,
     lastActive: number,
@@ -19,27 +24,24 @@ type PresenceState = {
 // Users show as inactive after this threshold.
 const INACTIVE_THRESHOLD = 5 * 60 * 1000;
 
-export class PresenceController {
-    protected thread: Thread;
-    protected intervalHandle: ReturnType<typeof setInterval>;
-    protected handlers: {[name: string]: ( (...args: any) => void)[]} = {};
+export class PresenceController extends Controller {
+    protected intervalHandle?: ReturnType<typeof setInterval>;
 
     constructor(
         protected state: PresenceState,
-        protected service: Service,
-        protected name: string = "presence",
-        protected threadName: string = "presence") {
+        params: ControllerParams) {
+
+        params.threadName = params.threadName ?? "presence";
+
+        super(params);
 
         this.state.controller = this;
         this.state.list = [];
         this.state.lastActive = 0;
+    }
 
-        this.thread = this.service.makeThread(this.threadName);
-
-        this.service.addThreadSync(this.thread);
-
-        this.thread.stream().onChange(this.handleIncomingPresence)
-            .onClose(() => this.close());
+    protected init() {
+        super.init();
 
         setInterval(this.refreshPresence, 5000);
 
@@ -61,12 +63,15 @@ export class PresenceController {
     }
 
     public close() {
-        clearInterval(this.intervalHandle);
-        this.thread.close();
+        super.close();
+
+        this.intervalHandle && clearInterval(this.intervalHandle);
+
         this.state.list = [];
     }
 
-    protected handleIncomingPresence = (item: TransformerItem, eventType: string) => {
+    protected handleOnChange(item: TransformerItem, eventType: string) {
+        // TODO handle delete
         const node = item.node;
 
         const publicKey = node.getOwner();
@@ -96,7 +101,7 @@ export class PresenceController {
 
         this.refreshPresence();
 
-        this.triggerEvent("update");
+        this.update();
     }
 
     protected refreshPresence = () => {
@@ -115,29 +120,7 @@ export class PresenceController {
         }
 
         if (updated) {
-            this.triggerEvent("update");
+            this.update();
         }
-    }
-
-    public onUpdate(cb: () => void) {
-        this.hookEvent("update", cb);
-    }
-
-    protected hookEvent(name: string, callback: ( (...args: any) => void)) {
-        const cbs = this.handlers[name] || [];
-        this.handlers[name] = cbs;
-        cbs.push(callback);
-    }
-
-    protected unhookEvent(name: string, callback: ( (...args: any) => void)) {
-        const cbs = (this.handlers[name] || []).filter( (cb: ( (...args: any) => void)) => callback !== cb );
-        this.handlers[name] = cbs;
-    }
-
-    protected triggerEvent(name: string, ...args: any) {
-        const cbs = this.handlers[name] || [];
-        cbs.forEach( (callback: ( (...args: any) => void)) => {
-            setImmediate( () => callback(...args) );
-        });
     }
 }
