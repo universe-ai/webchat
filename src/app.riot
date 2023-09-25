@@ -6,13 +6,18 @@
             <div class="flex mb-2 mt-3 px-4 text-rubriker justify-between">
                 <div class="flex-auto">
                     <h1 class="mb-1 font-bold text-xl text-rubriker leading-snug truncate">
-                        Space Chat
+                        UniverseAI Decentralized Web Chat
                     </h1>
                     <div class="h-5">
                     </div>
                     <div class="flex flex-row">
-                        <button id="connectionModalButton" class="basis-1/5 -py-2 text-green-500 bg-white box-border w-10 border-2 border-green-500 shadow-lg shadow-green-400" type="button">
-                            <img src={ state.picture } class="w-10 h-10">
+                        <button class="basis-1/5 -py-2 text-green-500 bg-white box-border w-10 border-2 border-green-500 shadow-lg shadow-green-400" type="button">
+                            <div class="w-10 h-10" if={this.state.service && this.state.universe.isAuthed()}>
+                                <minidenticon-svg
+                                    username={this.state.service.getPublicKey().toString("hex")}
+                                    saturation="60" lightness="50">
+                                </minidenticon-svg>
+                            </div>
                         </button>
                         <div class="basis-4/5 -px-8 ml-2">
                             <div class="flex flex-col font-bold">
@@ -93,16 +98,17 @@
                     </div>
                 </div>
 
-                <div each={channel in state.channels}
+                <div each={channel in state.channels.list}
                     if={channel.isDirect}
-                    onclick={channelClicked}
+                    id="channel_{channel.node.getId1().toString("hex")}"
+                    onclick={ () => this.channelClicked(channel)}
                     class="flex items-center mb-3 px-4">
 
                     <svg class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20">
                         <circle cx="10" cy="10" r="10">
                     </svg>
 
-                    <span class="text-rubriker opacity-75">
+                    <span class="text-rubriker opacity-75 {channel.active ? "font-bold" : ""}">
                         {channel.name}
                     </span>
                 </div>
@@ -114,31 +120,40 @@
             <!-- Channel header -->
             <div class="bg-bakgrund-1 border-b flex px-6 py-2 items-center flex-none">
                 <div class="flex flex-col">
-                    <h3 class="text-rubriker mb-1 font-extrabold">
-                        { state.chatAreaTitle }
-                    </h3>
-                    <div class="text-underrubriker text-normal text-sm truncate">
-                        { state.chatAreaDescription }
-                    </div>
-                </div>
-
-                <div class="flex flex-col">
-                    <div if={state.error}>
+                    <div if={state.error} style="background-color: red;">
                         <p>Error: {state.error}</p>
                     </div>
 
                     <div if={!state.universe.isActive()}
-                        style="display: block; background-color: yellow;">
-
-                        <h1>Please activate the UniverseAI Data Wallet browser extension
-                            by clicking on the icon in your browser toolbar.</h1>
+                        style="display: block; background-color: orange;">
+                        <h1>
+                            Please activate the UniverseAI Data Wallet browser extension
+                            by clicking on the
+                            <img src="gfx/universe-logo.svg" class="w-10 h-10">
+                            icon in your browser toolbar.
+                        </h1>
                     </div>
 
-                    <button if={state.universe.isActive() && !state.universe.isAuthed()}
-                        type="button" onclick={ auth }>
-
-                        Authenticate with Data Wallet
+                    <button if={state.universe.isActive() && !state.universe.isAuthed() && !state.universe.isPendingAuth()}
+                        type="button" onclick={ auth } style="background-color: yellow">
+                        Click here to request authorization from the Data Wallet.
                     </button>
+
+                    <div if={state.universe.isPendingAuth()}
+                        style="display: block; background-color: green;">
+                        <h1>
+                            Now, open the Data Wallet extension to accept or deny the authorization,
+                            by clicking on the
+                            <img src="gfx/universe-logo.svg" class="w-10 h-10">
+                            icon in your browser toolbar.
+                        </h1>
+                    </div>
+
+                    <div if={state.universe.isAuthed()}
+                        style="display: block; background-color: white;">
+                        <h1>Authorized as {this.state.service.getPublicKey().toString("hex")}</h1>
+                        <button type="button" onclick={close}>Logout</button>
+                    </div>
                 </div>
 
                 <div class="ml-auto hidden md:block">
@@ -154,14 +169,15 @@
             </div>
 
             <webchat-channel
-                each={channel in state.channels}
-                class="{channel.active ? "" : "non-visible"}"
+                each={channel in state.channels.list}
+                class="{channel.active ? "" : "display-none"}"
                 Globals={props.Globals}
-                service={props.service}
+                service={state.service}
                 channel={channel}>
             </webchat-channel>
         </div>
     </div>
+    <hr />
 
     <script>
         import * as riot from "riot";
@@ -178,6 +194,10 @@
                     }, true);
                 });
 
+                this.resetState();
+            },
+
+            resetState() {
                 const universe = new this.props.Globals.Universe();
 
                 universe.onActive( () => {
@@ -187,8 +207,22 @@
                 this.state = {
                     universe,
                     presence: {}, // typeof PresenceState
-                    channels: [], // {node}[]
+                    channels: {}, // typeof ChannelsState
                 };
+            },
+
+            close() {
+                this.state.universe.close();
+
+                this.state.presence.controller?.close();
+
+                this.state.channels?.controller?.close();
+
+                this.state.service.stop();
+
+                this.resetState();
+
+                this.update();
             },
 
             async auth() {
@@ -196,8 +230,14 @@
                     return;
                 }
 
+                this.state.error = "";
+
                 try {
+                    // We do this to show updated status about authorization.
+                    setTimeout( () => this.update() );
+
                     await this.state.universe.auth();
+
                     this.connect();
                 }
                 catch(e) {
@@ -253,16 +293,13 @@
                     connected: true,
                 });
 
-                /*this.initChannels();*/
-
-                // This PresenceController will write to state.presence.
-                // This controller instance will be stored as state.presence.controller.
-                new this.props.Globals.PresenceController(this.state.presence, this.state.service)
+                // This controller instance will be stored to state.presence.controller.
+                new this.props.Globals.PresenceController(this.state.presence, {service: this.state.service})
                     .onUpdate(() => this.update());
 
-                // This ChannelsController will by default write to state.channels.
-                // This instance will be stored as state.channels.controller.
-                // new this.props.Globals.ChannelsController(this.state, this.state.service);
+                // This controller instance will be stored to state.channels.controller.
+                new this.props.Globals.ChannelsController(this.state.channels, {service: this.state.service})
+                    .onUpdate(() => this.update());
             },
 
             handleStorageClose() {
@@ -272,7 +309,9 @@
             },
 
             async showUserInfo(event) {
-                const publicKey = Buffer.from(event.target.id.split('_')[1], "hex");
+                event.preventDefault();
+
+                const publicKey = Buffer.from(event.target.id.split("_")[1], "hex");
 
                 const modal = riot.component(WebChatDialogUserInfo)
                     (this.root.appendChild(document.createElement("DIV")), {publicKey});
@@ -284,15 +323,41 @@
                 }
 
                 if (ret.action === "message") {
-                    this.startPrivateChat(publicKey);
+                    const nodeId1 = await this.state.channels.controller.makePrivateChannel(publicKey);
+
+                    // TODO: optimize
+                    setTimeout( () => this.openChannel(nodeId1), 1000);
                 }
             },
+
+            channelClicked(channel) {
+                this.openChannel(channel.node.getId1());
+            },
+
+            openChannel(nodeId1) {
+                const listLength = this.state.channels.list.length;
+
+                for (let i=0; i<listLength; i++) {
+                    const channel = this.state.channels.list[i];
+                    if (channel.node.getId1().equals(nodeId1)) {
+                        channel.active = true;
+                    }
+                    else {
+                        channel.active = false;
+                    }
+                }
+
+                this.update();
+            }
         }
     </script>
 
     <style>
         .non-visible {
             visibility: hidden;
+        }
+        .display-none {
+            display: none;
         }
     </style>
 </app>
