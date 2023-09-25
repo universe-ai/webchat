@@ -179,7 +179,7 @@ export class ChannelController extends Controller {
                 });
             }
 
-            const streamReader = new this.props.Globals.BrowserFileStreamReader(file);
+            const streamReader = new this.Globals!.BrowserFileStreamReader(file);
 
             this.thread.upload(node.getId1()!, streamReader);
 
