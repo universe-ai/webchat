@@ -11,8 +11,8 @@
                     <div class="h-5">
                     </div>
                     <div class="flex flex-row">
-                        <button class="basis-1/5 -py-2 text-green-500 bg-white box-border w-10 border-2 border-green-500 shadow-lg shadow-green-400" type="button">
-                            <div class="w-10 h-10" if={this.state.service && this.state.universe.isAuthed()}>
+                        <button class="basis-0 text-green-500 bg-white box-border w-10 h-10 border-2 border-green-500 shadow-lg shadow-green-400" type="button" if={this.state.service && this.state.universe.isAuthed()}>
+                            <div class="w-10 h-10">
                                 <minidenticon-svg
                                     username={this.state.service.getPublicKey().toString("hex")}
                                     saturation="60" lightness="50">
