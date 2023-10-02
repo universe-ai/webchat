@@ -9,7 +9,8 @@
         "tsc": "./node_modules/.bin/tsc",
         "build-script": "./node_modules/.bin/browserify --s module -i ./node_modules/universeai/build/src/datastreamer/FileStreamWriter.js -i ./node_modules/universeai/build/src/datastreamer/FileStreamReader.js -i sqlite3 -i postgresql-client ./build/Globals.js -o ./build/Globals-browser.js",
         "build-app": "webpack -c ./webpack.config.js && cp -r ./src/index.html ./src/favicon.ico ./src/gfx ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./dist/",
-        "build-app-release": "webpack -c ./webpack.config.release.js && cp ./src/index.html ./src/favicon.ico ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./release/"
+        "build-app-release": "webpack -c ./webpack.config.release.js && cp ./src/index.html ./src/favicon.ico ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./release/",
+        "lint": "npx eslint ./src"
     },
     "repository": {
         "type": "git",
@@ -29,11 +30,13 @@
         "@types/libsodium-wrappers": "^0.7.9",
         "@types/mocha": "^9.1.1",
         "@types/node": "^14.17.21",
+        "@typescript-eslint/eslint-plugin": "^6.7.3",
         "browserify": "^17.0.0",
         "buffer": "^6.0.3",
         "chai": "^4.3.10",
         "crypto-browserify": "^3.12.0",
         "css-loader": "^6.7.1",
+        "eslint": "^8.50.0",
         "mini-css-extract-plugin": "^2.6.0",
         "mocha": "^10.0.0",
         "path-browserify": "^1.0.1",
