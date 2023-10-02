@@ -69,6 +69,9 @@ export class PresenceController extends Controller {
     }
 
     protected handleOnChange(item: TransformerItem, eventType: string) {
+        // Mark parameter as unused
+        <unknown>eventType;
+
         // TODO handle delete
         const node = item.node;
 
