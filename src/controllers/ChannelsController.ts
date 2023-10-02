@@ -1,6 +1,4 @@
 import {
-    Service,
-    Thread,
     TransformerItem,
     DataInterface,
 } from "universeai";
