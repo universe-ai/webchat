@@ -170,7 +170,7 @@
 
             <webchat-channel
                 each={channel in state.channels.list}
-                class="{channel.active ? "flex flex-col flex-1 overflow-hidden" : "display-none"}"
+                class="{channel.active ? "flex flex-col flex-1 overflow-hidden" : "hidden"}"
                 Globals={props.Globals}
                 service={state.service}
                 channel={channel}>
@@ -351,13 +351,4 @@
             }
         }
     </script>
-
-    <style>
-        .non-visible {
-            visibility: hidden;
-        }
-        .display-none {
-            display: none;
-        }
-    </style>
 </app>
