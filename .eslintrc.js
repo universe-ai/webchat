@@ -17,5 +17,9 @@ module.exports = {
         "no-constant-condition": "off",
         "@typescript-eslint/no-non-null-assertion": "off"
     },
+    env: {
+        "browser": true,
+        "node": true
+    },
     root: true,
 };
