@@ -5,7 +5,7 @@
             <div class="w-10 h-10 rounded mr-3">
                 <minidenticon-svg username={message.publicKey} saturation="60" lightness="50"></minidenticon-svg>
             </div>
-            <div class={ message.text.includes(state.searchTerm) ? "flex-1 -mt-1 overflow-hidden bg-yellow-300" : "flex-1 -mt-1 overflow-hidden" }>
+            <div class="flex-1 -mt-1 overflow-hidden">
                 <div>
                     <span class="font-bold">{ message.publicKey }</span>
                     <span class="text-gray-400 text-xs ml-2">{ message.creationTimestamp }</span>
