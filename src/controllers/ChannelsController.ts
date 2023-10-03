@@ -1,6 +1,5 @@
 import {
-    TransformerItem,
-    DataInterface,
+    TRANSFORMER_EVENT,
 } from "universeai";
 
 import {
@@ -9,45 +8,35 @@ import {
 } from "./Controller";
 
 export type Channel = {
-    node: DataInterface,
     isDirect: boolean,
     name: string,
     active: boolean,
 };
 
-export type ChannelsState = {
-    controller: ChannelsController,
-    list: Array<Channel>,
-};
-
 export class ChannelsController extends Controller {
-    protected intervalHandle?: ReturnType<typeof setInterval>;
-
-    constructor(
-        protected state: ChannelsState,
-        params: ControllerParams) {
+    constructor(params: ControllerParams) {
 
         params.threadName = params.threadName ?? "channels";
 
         super(params);
-
-        this.state.controller = this;
-        this.state.list = [];
     }
 
     public close() {
         super.close();
-
-        this.state.list = [];
     }
 
-    protected handleOnChange(item: TransformerItem, eventType: string) {
+    protected handleOnChange(event: TRANSFORMER_EVENT) {
         const publicKey = this.service.getPublicKey();
 
-        if (eventType === "add" || eventType === "insert") {
-            const isDirect = (item.node.getRefId()?.length ?? 0) > 0;
+        event.added.forEach( id1 => {
+            const node = this.threadStreamResponseAPI.getTransformer().getNode(id1);
+            const data = this.threadStreamResponseAPI.getTransformer().getData(id1);
 
-            const node = item.node as DataInterface;
+            if (!node || !data) {
+                return;
+            }
+
+            const isDirect = (node.getRefId()?.length ?? 0) > 0;
 
             let name = node.getData()?.toString() ?? "<no name>";
 
@@ -60,22 +49,34 @@ export class ChannelsController extends Controller {
                 }
             }
 
-            this.state.list.push({
-                node,
-                isDirect,
-                name,
-                active: false,
-            });
+            data.isDirect = isDirect;
+            data.name     = name;
+            data.active   = false;
+        });
 
-            this.update();
-        }
-        else if (eventType === "delete") {
-            // TODO
+        this.update();
+    }
+
+    public setChannelActive(nodeId1: Buffer) {
+        const items = this.threadStreamResponseAPI.getTransformer().getItems();
+
+        const itemsLength = items.length;
+
+        for (let i=0; i<itemsLength; i++) {
+            const item = items[i];
+
+            if (item.id1.equals(nodeId1)) {
+                item.data.active = true;
+            }
+            else {
+                item.data.active = false;
+            }
         }
     }
 
     /**
      * Make a private channel node between two peers, unless one already exists then return it.
+     *
      * @returns nodeId1 of the channel
      * @throws if channel node cannot be created.
      */
@@ -85,21 +86,28 @@ export class ChannelsController extends Controller {
 
         const ourPublicKey = this.service.getPublicKey();
 
-        const length = this.state.list.length;
-        for (let i=0; i<length; i++) {
-            const channel = this.state.list[i];
+        const items = this.threadStreamResponseAPI.getTransformer().getItems();
 
-            if (channel.node.getRefId()?.length) {
-                if (channel.node.getOwner()?.equals(ourPublicKey)) {
-                    if (channel.node.getRefId()?.equals(friendPublicKey)) {
+        const itemsLength = items.length;
+
+        for (let i=0; i<itemsLength; i++) {
+            const item = items[i];
+
+            const node = item.node;
+
+            if (node.getRefId()?.length) {
+                if (node.getOwner()?.equals(ourPublicKey)) {
+                    if (node.getRefId()?.equals(friendPublicKey)) {
                         // Channel exists.
-                        return channel.node.getId1() as Buffer
+
+                        return node.getId1() as Buffer
                     }
                 }
-                else if (channel.node.getOwner()?.equals(friendPublicKey)) {
-                    if (channel.node.getRefId()?.equals(ourPublicKey)) {
+                else if (node.getOwner()?.equals(friendPublicKey)) {
+                    if (node.getRefId()?.equals(ourPublicKey)) {
                         // Channel exists.
-                        return channel.node.getId1() as Buffer;
+
+                        return node.getId1() as Buffer;
                     }
                 }
             }

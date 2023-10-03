@@ -49,7 +49,7 @@
                         </svg>
                     </div>
                 </div>
-                <div each={ presence in (state.presence?.list ?? []) } class="flex items-center mb-3 px-4">
+                <div each={ presence in (state.presenceController?.getPresence() ?? []) } class="flex items-center mb-3 px-4">
                     <svg if={presence.active} class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20"
                         style="width: 22px">
                         <circle cx="10" cy="10" r="10">
@@ -101,18 +101,18 @@
                     </div>
                 </div>
 
-                <div each={channel in state.channels.list}
-                    if={channel.isDirect}
-                    id="channel_{channel.node.getId1().toString("hex")}"
-                    onclick={ () => this.channelClicked(channel)}
+                <div each={item in state.channelsController?.getItems()}
+                    if={item.data.isDirect}
+                    id="channel_{item.node.getId1().toString("hex")}"
+                    onclick={ () => this.openChannel(item.id1)}
                     class="flex items-center mb-3 px-4">
 
                     <svg class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20">
                         <circle cx="10" cy="10" r="10">
                     </svg>
 
-                    <span class="text-rubriker opacity-75 {channel.active ? "font-bold" : ""} text-ellipsis overflow-hidden">
-                        {channel.name}
+                    <span class="text-rubriker opacity-75 {item.data.active ? "font-bold" : ""} text-ellipsis overflow-hidden">
+                        {item.data.name}
                     </span>
                 </div>
             </div>
@@ -164,11 +164,11 @@
             </div>
 
             <webchat-channel
-                each={channel in state.channels.list}
-                class="{channel.active ? "flex flex-col flex-1 overflow-hidden" : "hidden"}"
+                each={item in state.channelsController?.getItems()}
+                class="{item.data.active ? "flex flex-col flex-1 overflow-hidden" : "hidden"}"
                 Globals={props.Globals}
                 service={state.service}
-                channel={channel}>
+                item={item}>
             </webchat-channel>
         </div>
     </div>
@@ -185,7 +185,7 @@
             onBeforeMount(props, state) {
                 ["mousemove", "keydown", "touchstart"].forEach( (eventName) => {
                     document.addEventListener(eventName, () => {
-                        this.state.presence.controller?.activityDetected();
+                        this.state.presenceController?.activityDetected();
                     }, true);
                 });
 
@@ -201,17 +201,17 @@
 
                 this.state = {
                     universe,
-                    presence: {}, // typeof PresenceState
-                    channels: {}, // typeof ChannelsState
+                    presenceController: undefined,
+                    channelsController: undefined,
                 };
             },
 
             close() {
                 this.state.universe.close();
 
-                this.state.presence.controller?.close();
+                this.state.presenceController?.close();
 
-                this.state.channels?.controller?.close();
+                this.state.channelsController?.close();
 
                 this.state.service.stop();
 
@@ -288,13 +288,11 @@
                     connected: true,
                 });
 
-                // This controller instance will be stored to state.presence.controller.
-                new this.props.Globals.PresenceController(this.state.presence, {service: this.state.service})
-                    .onUpdate(() => this.update());
+                this.state.presenceController = new this.props.Globals.PresenceController({service: this.state.service});
+                this.state.presenceController.onUpdate(() => this.update()).onClose( () => console.error("Presence thread was closed") );
 
-                // This controller instance will be stored to state.channels.controller.
-                new this.props.Globals.ChannelsController(this.state.channels, {service: this.state.service})
-                    .onUpdate(() => this.update());
+                this.state.channelsController = new this.props.Globals.ChannelsController({service: this.state.service});
+                this.state.channelsController.onUpdate(() => this.update()).onClose( () => console.error("Channels thread was closed") );
             },
 
             handleStorageClose() {
@@ -318,29 +316,15 @@
                 }
 
                 if (ret.action === "message") {
-                    const nodeId1 = await this.state.channels.controller.makePrivateChannel(publicKey);
+                    const nodeId1 = await this.state.channelsController.makePrivateChannel(publicKey);
 
                     // TODO: optimize
                     setTimeout( () => this.openChannel(nodeId1), 1000);
                 }
             },
 
-            channelClicked(channel) {
-                this.openChannel(channel.node.getId1());
-            },
-
             openChannel(nodeId1) {
-                const listLength = this.state.channels.list.length;
-
-                for (let i=0; i<listLength; i++) {
-                    const channel = this.state.channels.list[i];
-                    if (channel.node.getId1().equals(nodeId1)) {
-                        channel.active = true;
-                    }
-                    else {
-                        channel.active = false;
-                    }
-                }
+                this.state.channelsController.setChannelActive(nodeId1);
 
                 this.update();
             }
