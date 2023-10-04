@@ -1,31 +1,31 @@
 <webchat-channel>
     <!-- Messages -->
     <div id="messagesList" class="px-6 py-4 flex-1 overflow-y-scroll">
-        <div each={ message in state.messages } class="flex items-start mb-4 text-base">
+        <div each={ item in state.controller?.getItems() } class="flex items-start mb-4 text-base" id={item.data.id1}>
             <div class="w-10 h-10 rounded mr-3">
-                <minidenticon-svg username={message.publicKey} saturation="60" lightness="50"></minidenticon-svg>
+                <minidenticon-svg username={item.data.publicKey} saturation="60" lightness="50"></minidenticon-svg>
             </div>
             <div class="flex-1 -mt-1 overflow-hidden">
                 <div>
-                    <span class="font-bold">{ message.publicKey }</span>
-                    <span class="text-gray-400 text-xs ml-2">{ message.creationTimestamp }</span>
+                    <span class="font-bold">{ item.data.publicKey }</span>
+                    <span class="text-gray-400 text-xs ml-2">{ item.data.creationTimestamp }</span>
                 </div>
-                <p if={!message.hasBlob} class="text-black leading-normal"><raw html={ message.text }/></p>
-                <div if={message.hasBlob && !(message.imgSrc || message.attSrc)}>
+                <p if={!item.data.hasBlob} class="text-black leading-normal"><raw html={ item.data.text }/></p>
+                <div if={item.data.hasBlob && !(item.data.imgSrc || item.data.attSrc)}>
                     Loading attachment...
                 </div>
-                <div if={message.imgSrc}>
-                    <img src={message.imgSrc} title={message.msg}
+                <div if={item.data.imgSrc}>
+                    <img src={item.data.imgSrc} title={item.data.msg}
                         style="max-height:240px;"
                     />
                 </div>
-                <div if={message.attSrc}>
+                <div if={item.data.attSrc}>
                     Attachment:
-                    <a href={message.attSrc} target="_blank"
+                    <a href={item.data.attSrc} target="_blank"
                         style="color:blue;"
                         rel="noopener noreferrer">
-                        {message.text || "Save attachment"}
-                    </a>&nbsp;({message.blobLength} bytes)
+                        {item.data.text || "Save attachment"}
+                    </a>&nbsp;({item.data.blobLength} bytes)
                 </div>
             </div>
         </div>
@@ -61,9 +61,9 @@
             },
 
             onBeforeMount(props, state) {
-                // This controller instance will be stored to state.presence.controller.
-                new this.props.Globals.ChannelController(this.state, {Globals: props.Globals, service: props.service, node: props.channel.node})
-                    .onUpdate(() => this.update());
+                state.controller = new this.props.Globals.ChannelController({Globals: props.Globals, service: props.service, node: props.item.node})
+
+                state.controller.onUpdate(() => this.update());
             },
 
             onBeforeUnmount(props, state) {
@@ -109,14 +109,14 @@
 
                 const messageElement = this.$("#chatAreaNewMessage");
 
-                const message = messageElement.value;
+                const messageText = messageElement.value;
 
                 const fileElement = this.$("#chatAreaInputFile");
                 const file = fileElement.files[0];
 
                 this.clearMessageAndFileInputs();
 
-                this.state.controller.submitMessage(message, file);
+                this.state.controller.submitMessage(messageText, file);
             },
 
             clearMessageAndFileInputs(event) {

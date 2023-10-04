@@ -1,7 +1,7 @@
 import {
-    TransformerItem,
     DataInterface,
     StreamReaderInterface,
+    TRANSFORMER_EVENT,
 } from "universeai";
 
 import {
@@ -11,20 +11,15 @@ import {
 
 export type Message = {
     publicKey: string,
+    id1: string,
     creationTimestamp: Date,
     text: string | undefined,
-    nodeId1: Buffer,
     hasBlob: boolean,
     blobLength: bigint | undefined,
     isDownloaded: boolean,
     imgSrc: any,
     attSrc: any,
     streamReader?: StreamReaderInterface,
-};
-
-export type ChannelState = {
-    controller: ChannelController,
-    messages: Array<Message>,
 };
 
 export type ChannelControllerParams = ControllerParams & {
@@ -48,9 +43,7 @@ export class ChannelController extends Controller {
     /** License targets. */
     protected targets: Buffer[] = [];
 
-    constructor(
-        protected state: ChannelState,
-        params: ChannelControllerParams) {
+    constructor(params: ChannelControllerParams) {
 
         params.threadName       = params.threadName ?? "channel";
         params.threadDefaults   = params.threadDefaults ?? {};
@@ -61,66 +54,57 @@ export class ChannelController extends Controller {
         if (params.node.getRefId()?.length) {
             // This is a private channel
             this.targets.push(params.node.getOwner()!);
+
             if (!params.node.getOwner()?.equals(params.node.getRefId()!)) {
                 this.targets.push(params.node.getRefId()!);
             }
         }
-
-        this.state.controller = this;
-        this.state.messages = [];
     }
 
     public close() {
         super.close();
-
-        this.state.messages = [];
     }
 
-    protected handleOnChange(item: TransformerItem, eventType: string) {
-        if (eventType === "add" || eventType === "insert") {
-            const dataNode      = item.node as DataInterface;
-            const text          = dataNode.getData()?.toString();
-            const nodeId1       = dataNode.getId1() as Buffer;
-            const hasBlob       = dataNode.hasBlob();
-            const blobLength    = dataNode.getBlobLength();
+    protected handleOnChange(event: TRANSFORMER_EVENT) {
+        event.added.forEach( id1 => {
+            const node = this.threadStreamResponseAPI.getTransformer().getNode(id1);
+            const data = this.threadStreamResponseAPI.getTransformer().getData(id1) as Message;
 
-            const timestamp = new Date(dataNode.getCreationTime()!);
+            if (!node || !data) {
+                return;
+            }
+
+            const text          = node.getData()?.toString();
+            const hasBlob       = node.hasBlob();
+            const blobLength    = node.getBlobLength();
+
+            const timestamp = new Date(node.getCreationTime()!);
 
             const autoDownload = true;
 
-            const message: Message = {
-                publicKey: dataNode.getOwner()!.toString("hex"),
-                creationTimestamp: timestamp,
-                text,
-                nodeId1,
-                hasBlob,
-                blobLength,
-                isDownloaded: false,
-                imgSrc: undefined,
-                attSrc: undefined,
-            };
+            data.publicKey = node.getOwner()!.toString("hex");
+            data.id1 = id1.toString("hex");
+            data.creationTimestamp = timestamp;
+            data.text = text;
+            data.hasBlob = hasBlob;
+            data.blobLength = blobLength;
 
-            if (eventType === "add") {
-                this.state.messages.push(message);
-            }
-            else {
-                this.state.messages.push(message);
-                /*this.state.chatAreaMessages.splice(index, 1, message);*/
-            }
+                //isDownloaded: false,
+                //imgSrc: undefined,
+                //attSrc: undefined,
 
-            if (hasBlob && autoDownload) {
-                // This is set to that we can follow the progress of the download in the UI.
-                message.streamReader = this.downloadFull(dataNode, message);
-            }
 
-            this.update();
-        }
-        else if (eventType === "delete") {
-            // TODO
-        }
+
+            //if (hasBlob && autoDownload) {
+                //// This is set to that we can follow the progress of the download in the UI.
+                //message.streamReader = this.downloadFull(dataNode, message);
+            //}
+        });
+
+        this.update();
     }
 
-    protected downloadFull(dataNode: DataInterface, message: Message) {
+    protected downloadFull(dataNode: DataInterface, data: Message) {
         const {blobDataPromise, streamReader} = this.thread.downloadFull(dataNode);
 
         blobDataPromise.then(blobData => {
@@ -140,10 +124,10 @@ export class ChannelController extends Controller {
             const url = URL.createObjectURL(file);
 
             if (mimeType.startsWith("image/")) {
-                message.imgSrc = url;
+                data.imgSrc = url;
             }
             else {
-                message.attSrc = url;
+                data.attSrc = url;
             }
 
             this.update();
@@ -152,7 +136,7 @@ export class ChannelController extends Controller {
         return streamReader;
     }
 
-    public async submitMessage(message: string, file: any) {
+    public async submitMessage(messageText: string, file: any) {
         if (file) {
             const filename = file.name;
 
@@ -160,6 +144,7 @@ export class ChannelController extends Controller {
 
             const blobLength = BigInt(file.size);
 
+            // TODO refId
             const [node] = await this.thread.post({
                     blobHash,
                     blobLength,
@@ -184,7 +169,7 @@ export class ChannelController extends Controller {
             // TODO: show progress and detect errors on upload.
         }
         else {
-            const params = {data: Buffer.from(message)};
+            const params = {data: Buffer.from(messageText)};
 
             const [node] = await this.thread.post(params);
 
