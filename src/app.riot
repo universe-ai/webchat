@@ -14,7 +14,7 @@
                     <div class="h-5">
                     </div>
                     <div class="flex flex-row">
-                        <button class="basis-0 text-green-500 bg-white box-border w-10 h-10 border-2 border-green-500 shadow-lg shadow-green-400" type="button" if={this.state.service && this.state.universe.isAuthed()}>
+                        <button class="basis-0 text-green-500 bg-white box-border w-10 h-10 border-2 shadow-lg {this.state.isConnectedToServer ? "border-green-500 shadow-green-400" : "border-red-500 shadow-red-400"}" type="button" if={this.state.service && this.state.universe.isAuthed()}>
                             <div class="w-10 h-10">
                                 <minidenticon-svg
                                     username={this.state.service.getPublicKey().toString("hex")}
@@ -203,6 +203,8 @@
                     universe,
                     presenceController: undefined,
                     channelsController: undefined,
+                    isConnectedToStorage: false,
+                    isConnectedToServer: false
                 };
             },
 
@@ -268,12 +270,26 @@
 
                 service.onConnectionConnect( (e) => {
                     const pubKey = e.p2pClient.getRemotePublicKey();
-                    console.info(`Peer just connected to service, peer's publicKey is ${pubKey.toString("hex")}`);
+                    const pubKeyHexStr = pubKey.toString("hex");
+                    const serverPubKeyHexStr = this.state.service.config.connectionConfigs[0].handshakeFactoryConfig.serverPublicKey.toString("hex");
+                    console.info(`Peer just connected to service, peer's publicKey is ${pubKeyHexStr}`);
+                    if (pubKeyHexStr == serverPubKeyHexStr) {
+                        this.update({
+                            isConnectedToServer: true,
+                        });
+                    }
                 });
 
                 service.onConnectionClose( (e) => {
                     const pubKey = e.p2pClient.getRemotePublicKey();
-                    console.info(`Peer disconnected, who has publicKey ${pubKey.toString("hex")}`);
+                    const pubKeyHexStr = pubKey.toString("hex");
+                    const serverPubKeyHexStr = this.state.service.config.connectionConfigs[0].handshakeFactoryConfig.serverPublicKey.toString("hex");
+                    console.info(`Peer disconnected, who has publicKey ${pubKeyHexStr}`);
+                    if (pubKeyHexStr == serverPubKeyHexStr) {
+                        this.update({
+                            isConnectedToServer: false,
+                        });
+                    }
                 });
 
                 this.update({
@@ -285,7 +301,7 @@
 
             handleStorageConnect() {
                 this.update({
-                    connected: true,
+                    isConnectedToStorage: true,
                 });
 
                 this.state.presenceController = new this.props.Globals.PresenceController({service: this.state.service});
@@ -297,7 +313,7 @@
 
             handleStorageClose() {
                 this.update({
-                    connected: false,
+                    isConnectedToStorage: false,
                 });
             },
 
