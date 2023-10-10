@@ -98,11 +98,11 @@ export abstract class Controller {
         this.triggerEvent("close");
     }
 
-    protected update() {
-        this.triggerEvent("update");
+    protected update(obj?: any) {
+        this.triggerEvent("update", obj);
     }
 
-    public onUpdate(cb: () => void): Controller {
+    public onUpdate(cb: (obj: any) => void): Controller {
         this.hookEvent("update", cb);
 
         return this;
