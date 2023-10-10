@@ -10,7 +10,9 @@
                     <span class="font-bold">{ item.data.publicKey }</span>
                     <span class="text-gray-400 text-xs ml-2">{ item.data.creationTimestamp }</span>
                 </div>
-                <p if={!item.data.hasBlob} class="text-black leading-normal"><raw html={ item.data.text }/></p>
+                <p if={!item.data.hasBlob} class="text-black leading-normal">
+                    <raw htmlWithLinks={ item.data.text }/>
+                </p>
                 <div if={item.data.hasBlob && !(item.data.imgSrc || item.data.attSrc)}>
                     Loading attachment...
                 </div>
