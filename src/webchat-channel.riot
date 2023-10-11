@@ -1,6 +1,12 @@
 <webchat-channel>
     <!-- Messages -->
     <div id="messagesList" class="px-6 py-4 flex-1 overflow-y-scroll">
+        <div class="flex items-start mb-4 text-base">
+            <button class="border-r-2 border-gray-4 text-blue-600"
+                onclick={()=>this.state.controller.loadHistory()}>Load more
+            </button>
+        </div>
+
         <div each={ item in state.controller?.getItems() } class="flex items-start mb-4 text-base" id={item.data.id1}>
             <div class="w-10 h-10 rounded mr-3">
                 <minidenticon-svg username={item.data.publicKey} saturation="60" lightness="50"></minidenticon-svg>
@@ -10,30 +16,79 @@
                     <span class="font-bold">{ item.data.publicKey }</span>
                     <span class="text-gray-400 text-xs ml-2">{ item.data.creationTimestamp }</span>
                 </div>
+
                 <p if={!item.data.hasBlob} class="text-black leading-normal">
                     <raw htmlWithLinks={ item.data.text }/>
                 </p>
-                <div if={item.data.hasBlob && !(item.data.imgSrc || item.data.attSrc)}>
-                    Loading attachment...
-                </div>
-                <div if={item.data.imgSrc}>
-                    <img src={item.data.imgSrc} title={item.data.msg}
-                        style="max-height:240px;"
-                    />
-                </div>
-                <div if={item.data.attSrc}>
-                    Attachment:
-                    <a href={item.data.attSrc} target="_blank"
-                        style="color:blue;"
-                        rel="noopener noreferrer">
-                        {item.data.text || "Save attachment"}
-                    </a>&nbsp;({item.data.blobLength} bytes)
-                </div>
+
+                <template if={item.data.hasBlob}>
+
+                    <div if={item.data.imgSrc}>
+                        <img src={item.data.imgSrc} alt={item.data.text}
+                            style="max-height:240px;"
+                        />
+                    </div>
+
+                    <div if={item.data.attSrc} class="italic">
+                        <a href={item.data.attSrc} target="_blank"
+                            style="color:blue;"
+                            rel="noopener noreferrer">
+                            {item.data.text || "Save attachment"}
+                        </a>&nbsp;({item.data.blobLength} bytes)
+                    </div>
+
+                    <template if={!item.data.imgSrc && !item.data.attSrc}>
+
+                        <template if={item.data.uploadInfo}>
+                            <div if={item.data.uploadInfo.text} class="italic">
+                                {item.data.uploadInfo.text}
+                            </div>
+
+                            <div if={item.data.uploadInfo?.downloadLink} class="italic">
+                                &nbsp;<a href="#" onclick={ () => state.controller.download(item.node, item.data) }
+                                    style="color:blue;"
+                                    rel="noopener noreferrer">{item.data.uploadInfo.downloadLink}</a>
+                            </div>
+
+                            <div if={item.data.uploadInfo?.uploadLink} class="italic">
+                                &nbsp;<a href="#" onclick={ () => state.controller.reupload(item.node, item.data) }
+                                    style="color:blue;"
+                                    rel="noopener noreferrer">{item.data.uploadInfo.uploadLink}</a>
+                            </div>
+
+                            <div if={item.data.uploadInfo?.throughput} class="italic">
+                                {item.data.uploadInfo.throughput}
+                            </div>
+
+                        </template>
+
+                        <template if={item.data.downloadInfo}>
+                            <div if={item.data.downloadInfo?.error} class="italic">
+                                {item.data.downloadInfo.error}
+                            </div>
+
+                            <div if={item.data.downloadInfo?.throughput} class="italic">
+                                {item.data.downloadInfo.throughput}
+                            </div>
+
+                            <div if={item.data.downloadInfo?.linkText} class="italic">
+                                &nbsp;<a href="#" onclick={ () => state.controller.download(item.node, item.data) }
+                                    style="color:blue;"
+                                    rel="noopener noreferrer">{item.data.downloadInfo.linkText}</a>
+                            </div>
+                        </template>
+
+                    </template>
+
+                </template>
             </div>
         </div>
     </div>
 
     <div id="chatAreaInput" class="pb-6 px-4 flex-none">
+        <div if={state.hashing}>
+            Hashing file contents... This can take a while.
+        </div>
         <div class="flex rounded-lg border-2 border-gray-500 overflow-hidden">
             <label for="chatAreaInputFile" class="cursor-pointer text-3xl bg-blue-500 hove:bg-blue-700 font-bold text-gray-400 border-r-2 border-gray-400 p-2 focus:outline-none focus:shadow-outline">
                 <svg class="fill-current h-6 w-6 block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M16 10c0 .553-.048 1-.601 1H11v4.399c0 .552-.447.601-1 .601-.553 0-1-.049-1-.601V11H4.601C4.049 11 4 10.553 4 10c0-.553.049-1 .601-1H9V4.601C9 4.048 9.447 4 10 4c.553 0 1 .048 1 .601V9h4.399c.553 0 .601.447.601 1z"/></svg>
@@ -65,7 +120,9 @@
             onBeforeMount(props, state) {
                 state.controller = new this.props.Globals.ChannelController({Globals: props.Globals, service: props.service, node: props.item.node})
 
-                state.controller.onUpdate(() => this.update());
+                state.controller.onUpdate((obj) => this.update(obj));
+
+                state.isPristineScroll = true;
             },
 
             onBeforeUnmount(props, state) {
@@ -98,11 +155,28 @@
                 });
             },
 
-            onUpdated() {
+            onBeforeUpdate(props, state) {
                 const messagesList = this.$("#messagesList");
 
-                if(messagesList) {
-                    messagesList.scrollTop = messagesList.scrollHeight;
+                if (state.isPristineScroll === true) {
+                    state.scrollFollow = true;
+
+                    if (messagesList.scrollHeight > 0) {
+                        state.isPristineScroll = false;
+                    }
+                }
+                else {
+                    state.scrollFollow = messagesList.scrollTop === messagesList.scrollHeight - messagesList.clientHeight;
+                }
+            },
+
+            onUpdated(props, state) {
+                if (state.scrollFollow) {
+                    const messagesList = this.$("#messagesList");
+
+                    if(messagesList) {
+                        messagesList.scrollTop = messagesList.scrollHeight - messagesList.clientHeight;
+                    }
                 }
             },
 
