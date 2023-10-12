@@ -3,10 +3,14 @@
     <div id="messagesList" class="px-6 py-4 flex-1 overflow-y-scroll">
         <div class="flex items-start mb-4 text-base">
             <button class="border-r-2 border-gray-4 text-blue-600"
+                onclick={()=>this.export()}>Export messages
+            </button>
+        </div>
+        <div class="flex items-start mb-4 text-base">
+            <button class="border-r-2 border-gray-4 text-blue-600"
                 onclick={()=>this.state.controller.loadHistory()}>Load more
             </button>
         </div>
-
         <div each={ item in state.controller?.getItems() } class="flex items-start mb-4 text-base" id={item.data.id1}>
             <div class="w-10 h-10 rounded mr-3">
                 <minidenticon-svg username={item.data.publicKey} saturation="60" lightness="50"></minidenticon-svg>
@@ -204,6 +208,46 @@
                 fileElement.value = "";
                 const fileElementRemove = this.$("#chatAreaInputFileRemove");
                 fileElementRemove.classList.add("hidden");
+            },
+
+            export(event) {
+                // Prepare data
+                let data = "";
+
+                // Add information disclaimer
+                data += "Information notice: this file potentially contains internal, sensitive, restricted and/or confidential information\n";
+
+                // Add license information
+                data += "License(s): " + "UNKNOWN" + "\n";
+
+                // Add ruler
+                data += "==================================================================================================================\n";
+
+                const items = this.state.controller.getItems();
+                for(let i=0; i<items.length; i++) {
+                    const itemData = items[i].data;
+                    data += itemData.publicKey + "\n";
+                    data += itemData.creationTimestamp + "\n";
+                    data += itemData.text + "\n";
+                    data += "\n";
+                }
+
+                // Create new resource with data contents
+                const file = new File([data], {
+                    type: "text/plain"
+                });
+
+                // Create temporary link element
+                const anchorElement = document.createElement("a");
+                anchorElement.style = "hidden";
+                document.body.appendChild(anchorElement);
+                anchorElement.href = URL.createObjectURL(file);
+                anchorElement.download = "webchat_" + this.state.controller.targets[0].toString("hex") + "_" + (new Date().toISOString().split('T')[0]) + ".txt";
+
+                // Trigger download and cleanup resources
+                anchorElement.click();
+                URL.revokeObjectURL(anchorElement.href);
+                anchorElement.remove();
             }
         }
     </script>
