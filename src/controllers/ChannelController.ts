@@ -4,6 +4,7 @@ import {
     TRANSFORMER_EVENT,
     BufferStreamWriter,
     StreamStatus,
+    WriteStats,
 } from "universeai";
 
 import {
@@ -104,19 +105,20 @@ export class ChannelController extends Controller {
             message.hasBlob = hasBlob;
             message.blobLength = blobLength;
 
-            if (hasBlob && !message.imgSrc && !message.uploadInfo && !message.uploadStreamWriter) {
+            if (hasBlob && blobLength !== undefined && !message.imgSrc &&
+                !message.uploadInfo && !message.uploadStreamWriter) {
 
                 const extension = node.getData()?.toString().toLowerCase().split(".").pop() ?? "";
                 const mimeType = MIME_TYPES[extension as keyof typeof MIME_TYPES ] ?? "";
 
-                if (node.getBlobLength()! > BigInt(MAX_BLOB_SIZE)) {
-                    message.downloadInfo = {error: "Attachment too large to download in browser client"};
+                if (blobLength > BigInt(MAX_BLOB_SIZE)) {
+                    message.downloadInfo = {error: `Attachment ${text} too large to download in browser client (${blobLength} bytes).`};
                 }
                 else if (mimeType.startsWith("image/")) {
                     this.download(node, message);
                 }
                 else {
-                    message.downloadInfo = {linkText: `Click to download ${text}`};
+                    message.downloadInfo = {linkText: `Click to download ${text} (${blobLength} bytes).`};
                 }
             }
         });
@@ -141,7 +143,7 @@ export class ChannelController extends Controller {
         this.update();
     }
 
-    protected download(node: DataInterface, message: Message) {
+    protected download(node: DataInterface, message: Message, retry: boolean = true) {
         const streamReader = this.thread.getBlobStreamReader(node.getId1()!);
         let downloadStreamWriter: StreamWriterInterface | undefined;
 
@@ -151,67 +153,108 @@ export class ChannelController extends Controller {
 
         const mimeType = MIME_TYPES[extension as keyof typeof MIME_TYPES ] ?? "";
 
-        if (mimeType.startsWith("image/") && node.getBlobLength()! <= BigInt(MAX_BLOB_SIZE)) {
-            // download image to show in UI.
-            downloadStreamWriter = new BufferStreamWriter(streamReader);
+        const showBlob = mimeType.startsWith("image/") && node.getBlobLength()! <= BigInt(MAX_BLOB_SIZE);
 
-            message.downloadStreamWriter = downloadStreamWriter;
+        // download image to show in UI.
+        downloadStreamWriter = new BufferStreamWriter(streamReader);
 
-            downloadStreamWriter.run().then( writeData => {
-                if (writeData.status === StreamStatus.RESULT) {
-                    const file = new File((downloadStreamWriter as BufferStreamWriter).getBuffers(), filename, { type: mimeType });
+        message.downloadStreamWriter = downloadStreamWriter;
 
-                    message.objectURL = URL.createObjectURL(file);
+        downloadStreamWriter.run(0).then( writeData => {
+            if (writeData.status === StreamStatus.RESULT) {
+                const file = new File((downloadStreamWriter as BufferStreamWriter).getBuffers(), filename, { type: mimeType });
+
+                message.objectURL = URL.createObjectURL(file);
+
+                if (showBlob) {
                     message.imgSrc = message.objectURL;
-
-                    delete message.downloadInfo;
                 }
                 else {
-                    message.downloadInfo = {error: `Could not download ${message.text}`, linkText: "Click to try again"};
-                }
-
-                this.update();
-            });
-        }
-        else {
-            // start download to save as file
-            downloadStreamWriter = new BufferStreamWriter(streamReader);
-
-            message.downloadStreamWriter = downloadStreamWriter;
-
-            downloadStreamWriter.run().then( writeData => {
-                if (writeData.status === StreamStatus.RESULT) {
-                    const file = new File((downloadStreamWriter as BufferStreamWriter).getBuffers(), filename, { type: mimeType });
-
-                    message.objectURL = URL.createObjectURL(file);
                     message.attSrc = message.objectURL;
-
-                    delete message.downloadInfo;
-                }
-                else {
-                    message.downloadInfo = {error: `Could not download ${message.text}`, linkText: "Click to try again"};
                 }
 
-                this.update();
-            });
-        }
+                delete message.downloadInfo;
+            }
+            else {
+                if (!retry) {
 
-        downloadStreamWriter?.onStats( stats => {
-            if (!downloadStreamWriter?.isClosed()) {
-                const throughput = stats.isPaused ? "Paused" :
-                    `${Math.floor(stats.throughput / 1024)} kb/s`;
+                    message.downloadInfo = {error: `${message.text} could not be downloaded.`, linkText: "Click to try again."};
 
-                const percent = Number( (Number(stats.pos) / Number(stats.size) || 0) * 100).toFixed(2);
+                    this.update();
 
-                message.downloadInfo = {throughput: `${percent}% ${throughput}`};
+                    return;
+                }
 
-                this.update();
+                // hook service
+                const unhook = this.params.service.onBlob(node.getId1()!, () => {
+                    this.download(node, message, false);
+                });
+
+                (async () => {
+                    const generator = this.params.service.syncBlob(node.getId1()!);
+
+                    while (true) {
+                        const value = generator.next().value;
+
+                        if (value === undefined) {
+                            message.downloadInfo = {error: `${message.text} could not be fetched from peers.`, linkText: "Click to try again."};
+                            break;
+                        }
+
+                        value.streamWriter.onStats( stats => {
+                            const throughput = this.formatThroughput(stats).throughput;
+
+                            message.downloadInfo = {
+                                error: `Found ${message.text} with peer. Fetching it.`,
+                                throughput,
+                            };
+
+                            this.update();
+                        });
+
+                        const success = await value.promise;
+
+                        if (!success) {
+                            continue;
+                        }
+
+                        // Success. Hook will be called now.
+                        return;
+                    }
+
+                    // No success
+                    unhook();
+
+                    this.update();
+                })();
+
+                message.downloadInfo = {error: `Could not download ${message.text}. Attempting to fetch it from peers, hang on...`};
             }
 
             this.update();
         });
 
+        downloadStreamWriter?.onStats( stats => {
+            message.downloadInfo = this.formatThroughput(stats);
+            this.update();
+
+            this.update();
+        });
+
         this.update();
+    }
+
+    protected formatThroughput(stats: WriteStats): {throughput: string} {
+        if (stats.finishTime) {
+            return {throughput: "Finished"};
+        }
+
+        const throughput = stats.isPaused ? "Paused" :
+            `${Math.floor(stats.throughput / 1024)} kb/s`;
+
+        const percent = Number( (Number(stats.pos) / Number(stats.size) || 0) * 100).toFixed(2);
+
+        return {throughput: `${percent}% ${throughput}`};
     }
 
     public async reupload(node: DataInterface, message: Message) {
@@ -298,16 +341,8 @@ export class ChannelController extends Controller {
         });
 
         uploadStreamWriter.onStats( stats => {
-            if (!uploadStreamWriter.isClosed()) {
-                const throughput = stats.isPaused ? "Paused" :
-                    `${Math.floor(stats.throughput / 1024)} kb/s`;
-
-                const percent = Number( (Number(stats.pos) / Number(stats.size) || 0) * 100).toFixed(2);
-
-                message.uploadInfo = {throughput: `${percent}% ${throughput}`};
-
-                this.update();
-            }
+            message.uploadInfo = this.formatThroughput(stats);
+            this.update();
         });
 
         return uploadStreamWriter;
