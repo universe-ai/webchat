@@ -55,7 +55,7 @@ export class ChannelController extends Controller {
     // this will be inited from the original fetch request.
     protected tail: number;
 
-    constructor(params: ChannelControllerParams) {
+    constructor(protected params: ChannelControllerParams) {
 
         params.threadName       = params.threadName ?? "channel";
         params.threadDefaults   = params.threadDefaults ?? {};
@@ -76,6 +76,29 @@ export class ChannelController extends Controller {
                 this.targets.push(params.node.getRefId()!);
             }
         }
+    }
+
+    public static GetName(node: DataInterface, publicKey: Buffer): {name: string, isDirect: boolean} {
+        const isDirect = (node.getRefId()?.length ?? 0) > 0;
+
+        let name = node.getData()?.toString() ?? "<no name>";
+
+        if (isDirect) {
+            if (node.getRefId()?.equals(publicKey)) {
+                name = node.getOwner()!.toString("hex");
+            }
+            else {
+                name = node.getRefId()!.toString("hex");
+            }
+        }
+
+        return {name, isDirect};
+    }
+
+    public getName(): {name: string, isDirect: boolean} {
+        const publicKey = this.service.getPublicKey();
+
+        return ChannelController.GetName(this.params.node, publicKey);
     }
 
     public close() {

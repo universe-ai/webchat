@@ -7,6 +7,10 @@ import {
     ControllerParams,
 } from "./Controller";
 
+import {
+    ChannelController,
+} from "./ChannelController";
+
 export type Channel = {
     isDirect: boolean,
     name: string,
@@ -36,18 +40,7 @@ export class ChannelsController extends Controller {
                 return;
             }
 
-            const isDirect = (node.getRefId()?.length ?? 0) > 0;
-
-            let name = node.getData()?.toString() ?? "<no name>";
-
-            if (isDirect) {
-                if (node.getRefId()?.equals(publicKey)) {
-                    name = node.getOwner()!.toString("hex");
-                }
-                else {
-                    name = node.getRefId()!.toString("hex");
-                }
-            }
+            const {name, isDirect} = ChannelController.GetName(node, publicKey);
 
             data.isDirect = isDirect;
             data.name     = name;

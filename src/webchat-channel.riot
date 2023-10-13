@@ -242,7 +242,7 @@
                 anchorElement.style = "hidden";
                 document.body.appendChild(anchorElement);
                 anchorElement.href = URL.createObjectURL(file);
-                anchorElement.download = "webchat_" + this.state.controller.targets[0].toString("hex") + "_" + (new Date().toISOString().split('T')[0]) + ".txt";
+                anchorElement.download = "webchat_" + this.state.controller.getName().name + "_" + (new Date().toISOString().split('T')[0]) + ".txt";
 
                 // Trigger download and cleanup resources
                 anchorElement.click();
