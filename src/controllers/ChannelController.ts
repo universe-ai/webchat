@@ -34,6 +34,8 @@ export type ChannelControllerParams = ControllerParams & {
 
 const MAX_BLOB_SIZE = 100 * 1024 * 1024;
 
+// These are mime types we show in the client,
+// other mime types will be attachemnts.
 const MIME_TYPES = {
     "apng":  "image/apng",
     "avif":  "image/avif",
@@ -278,7 +280,13 @@ export class ChannelController extends Controller {
 
         uploadStreamWriter.run().then( writeData => {
             if (writeData.status === StreamStatus.RESULT) {
-                if (file.type.startsWith("image/")) {
+                const filename = node.getData()?.toString() ?? "";
+
+                const extension = filename.toLowerCase().split(".").pop() ?? "";
+
+                const mimeType = MIME_TYPES[extension as keyof typeof MIME_TYPES ] ?? "";
+
+                if (mimeType.startsWith("image/")) {
                     message.objectURL = URL.createObjectURL(file);
                     message.imgSrc = message.objectURL;
 
@@ -334,7 +342,7 @@ export class ChannelController extends Controller {
 
             const blobLength = BigInt(file.size);
 
-            const [node] = await this.thread.post({
+            const [node] = await this.thread.post("attachment", {
                     refId,
                     blobHash,
                     blobLength,
@@ -347,7 +355,7 @@ export class ChannelController extends Controller {
             }
 
             if (node.isLicensed()) {
-                await this.thread.postLicense(node, {
+                await this.thread.postLicense("default", node, {
                     targets: this.targets,
                 });
             }
@@ -367,14 +375,14 @@ export class ChannelController extends Controller {
                 data: Buffer.from(messageText),
             };
 
-            const [node] = await this.thread.post(params);
+            const [node] = await this.thread.post("message", params);
 
             if (!node) {
                 throw new Error("Could not create message node");
             }
 
             if (node.isLicensed()) {
-                await this.thread.postLicense(node, {
+                await this.thread.postLicense("default", node, {
                     targets: this.targets,
                 });
             }

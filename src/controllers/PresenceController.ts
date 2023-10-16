@@ -47,7 +47,7 @@ export class PresenceController extends Controller {
 
         const handle2 = setInterval( () => {
             if (Date.now() - this.state.lastActive < INACTIVE_THRESHOLD) {
-                this.thread.post();
+                this.thread.post("presence");
             }
         }, INACTIVE_THRESHOLD)
 
@@ -62,7 +62,7 @@ export class PresenceController extends Controller {
         const ts = Date.now();
 
         if (ts - this.state.lastActive >= INACTIVE_THRESHOLD) {
-            this.thread.post();
+            this.thread.post("presence");
         }
 
         this.state.lastActive = ts;
