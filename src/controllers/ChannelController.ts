@@ -237,8 +237,6 @@ export class ChannelController extends Controller {
         downloadStreamWriter?.onStats( stats => {
             message.downloadInfo = this.formatThroughput(stats);
             this.update();
-
-            this.update();
         });
 
         this.update();
