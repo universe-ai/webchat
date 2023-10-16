@@ -114,7 +114,7 @@ export class ChannelsController extends Controller {
         }
 
         // Chat does not exist.
-        const [node] = await this.thread.post({
+        const [node] = await this.thread.post("channel", {
             refId: friendPublicKey,
         });
 
@@ -123,7 +123,7 @@ export class ChannelsController extends Controller {
         }
 
         if (node.isLicensed()) {
-            await this.thread.postLicense(node, {
+            await this.thread.postLicense("channel", node, {
                 targets: [friendPublicKey, ourPublicKey],
             });
         }

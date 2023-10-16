@@ -64,7 +64,7 @@
         "pocket-sockets": "2.0.2",
         "sql.js": "^1.8.0",
         "tweetnacl": "^1.0.3",
-        "universeai": "0.6.8",
+        "universeai": "0.7.0",
         "web-worker": "^1.2.0"
     }
 }

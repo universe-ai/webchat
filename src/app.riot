@@ -262,16 +262,16 @@
 
                 });
 
-                service.onConnectionError( (e) => {
-                    console.info("Connection error", `${e.e.error}`);
+                service.onPeerError( (e) => {
+                    console.info("Peer error", `${e.e.error}`);
                 });
 
-                service.onConnectionConnect( (e) => {
+                service.onPeerConnect( (e) => {
                     const pubKey = e.p2pClient.getRemotePublicKey();
                     console.info(`Peer just connected to service, peer's publicKey is ${pubKey.toString("hex")}`);
                 });
 
-                service.onConnectionClose( (e) => {
+                service.onPeerClose( (e) => {
                     const pubKey = e.p2pClient.getRemotePublicKey();
                     console.info(`Peer disconnected, who has publicKey ${pubKey.toString("hex")}`);
                 });
