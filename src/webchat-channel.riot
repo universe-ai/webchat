@@ -1,6 +1,6 @@
 <webchat-channel>
     <!-- Messages -->
-    <div id="messagesList" class="px-6 py-4 flex-1 overflow-y-scroll">
+    <div id="messagesList_{props.item.id1.toString("hex")}" class="px-6 py-4 flex-1 overflow-y-scroll">
         <div class="flex items-start mb-4 text-base">
             <button class="border-r-2 border-gray-4 text-blue-600"
                 onclick={()=>this.export()}>Export messages
@@ -11,7 +11,7 @@
                 onclick={()=>this.state.controller.loadHistory()}>Load more
             </button>
         </div>
-        <div each={ item in state.controller?.getItems() } class="flex items-start mb-4 text-base" id={item.data.id1}>
+        <div each={ item in state.controller?.getItems() } class="flex items-start mb-4 text-base" id="message_{props.item.id1.toString("hex")}_{item.data.id1}">
             <div class="w-10 h-10 rounded mr-3">
                 <minidenticon-svg username={item.data.publicKey} saturation="60" lightness="50"></minidenticon-svg>
             </div>
@@ -89,21 +89,21 @@
         </div>
     </div>
 
-    <div id="chatAreaInput" class="pb-6 px-4 flex-none">
+    <div id="chatAreaInput_{props.item.id1.toString("hex")}" class="pb-6 px-4 flex-none">
         <div if={state.hashing}>
             Hashing file contents... This can take a while.
         </div>
         <div class="flex rounded-lg border-2 border-gray-500 overflow-hidden">
-            <label for="chatAreaInputFile" class="cursor-pointer text-3xl bg-blue-500 hove:bg-blue-700 font-bold text-gray-400 border-r-2 border-gray-400 p-2 focus:outline-none focus:shadow-outline">
+            <label for="chatAreaInputFile_{props.item.id1.toString("hex")}" class="cursor-pointer text-3xl bg-blue-500 hove:bg-blue-700 font-bold text-gray-400 border-r-2 border-gray-400 p-2 focus:outline-none focus:shadow-outline">
                 <svg class="fill-current h-6 w-6 block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M16 10c0 .553-.048 1-.601 1H11v4.399c0 .552-.447.601-1 .601-.553 0-1-.049-1-.601V11H4.601C4.049 11 4 10.553 4 10c0-.553.049-1 .601-1H9V4.601C9 4.048 9.447 4 10 4c.553 0 1 .048 1 .601V9h4.399c.553 0 .601.447.601 1z"/></svg>
             </label>
-            <button id="chatAreaInputFileRemove" class="text-3xl text-red-600 border-r-2 border-gray-400 p-2 hidden" onclick={ clearMessageAndFileInputs }>
+            <button id="chatAreaInputFileRemove_{props.item.id1.toString("hex")}" class="text-3xl text-red-600 border-r-2 border-gray-400 p-2 hidden" onclick={ clearMessageAndFileInputs }>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-x" viewBox="0 0 16 16">
                     <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                 </svg>
             </button>
-            <input id="chatAreaNewMessage" type="text" class="w-full px-4 outline-double outline-gray-100" placeholder="Type message" />
-            <input type="file" id="chatAreaInputFile" accept="*/*" class="hidden">
+            <input id="chatAreaNewMessage_{props.item.id1.toString("hex")}" type="text" class="w-full px-4 outline-double outline-gray-100" placeholder="Type message" />
+            <input type="file" id="chatAreaInputFile_{props.item.id1.toString("hex")}" accept="*/*" class="hidden">
             <!--<p>PNG, GIF, JPEG, BMP, SVG, TIFF, WebP (max. 65KB)</p>-->
             <button class="text-3xl text-gray-400 border-r-2 border-gray-400 p-2" onclick={ submitMessage }>
                 <svg class="fill-current h-6 w-6 block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
@@ -137,21 +137,21 @@
                 // Register <ENTER> key press as shortcut to submitMessage action
 
                 //dialog = thisRef.$("dialog");
-                this.$("#chatAreaNewMessage").addEventListener("keypress", (event) => {
+                this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`).addEventListener("keypress", (event) => {
                     if(event.key === "Enter") {
                         this.submitMessage(event);
                     }
                 });
 
                 // Register file input dialog change event
-                this.$("#chatAreaInputFile").addEventListener("change", (event) => {
+                this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`).addEventListener("change", (event) => {
                     const file = event.target.files[0];
                     if(file) {
-                        const messageElement = this.$("#chatAreaNewMessage");
+                        const messageElement = this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`);
                         if(messageElement) {
                             messageElement.value = file.name;
                             messageElement.disabled = true;
-                            this.$("#chatAreaInputFileRemove").classList.remove("hidden");
+                            this.$(`#chatAreaInputFileRemove_${this.props.item.id1.toString("hex")}`).classList.remove("hidden");
                         }
 
                         this.update();
@@ -160,7 +160,7 @@
             },
 
             onBeforeUpdate(props, state) {
-                const messagesList = this.$("#messagesList");
+                const messagesList = this.$(`#messagesList_${this.props.item.id1.toString("hex")}`);
 
                 if (state.isPristineScroll === true) {
                     state.scrollFollow = true;
@@ -176,7 +176,7 @@
 
             onUpdated(props, state) {
                 if (state.scrollFollow) {
-                    const messagesList = this.$("#messagesList");
+                    const messagesList = this.$(`#messagesList_${this.props.item.id1.toString("hex")}`);
 
                     if(messagesList) {
                         messagesList.scrollTop = messagesList.scrollHeight - messagesList.clientHeight;
@@ -187,11 +187,11 @@
             submitMessage(event) {
                 event.preventDefault();
 
-                const messageElement = this.$("#chatAreaNewMessage");
+                const messageElement = this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`);
 
                 const messageText = messageElement.value;
 
-                const fileElement = this.$("#chatAreaInputFile");
+                const fileElement = this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`);
                 const file = fileElement.files[0];
 
                 this.clearMessageAndFileInputs();
@@ -200,13 +200,13 @@
             },
 
             clearMessageAndFileInputs(event) {
-                const messageElement = this.$("#chatAreaNewMessage");
+                const messageElement = this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`);
                 messageElement.value = "";
                 messageElement.disabled = false;
 
-                const fileElement = this.$("#chatAreaInputFile");
+                const fileElement = this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`);
                 fileElement.value = "";
-                const fileElementRemove = this.$("#chatAreaInputFileRemove");
+                const fileElementRemove = this.$(`#chatAreaInputFileRemove_${this.props.item.id1.toString("hex")}`);
                 fileElementRemove.classList.add("hidden");
             },
 
