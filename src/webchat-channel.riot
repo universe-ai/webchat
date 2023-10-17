@@ -126,6 +126,10 @@
 
                 state.controller.onUpdate((obj) => this.update(obj));
 
+                // Post message to global PresenceController.
+                state.controller.onNotification( () =>
+                        window.postMessage({action: "NEW_MESSAGE"}));
+
                 state.isPristineScroll = true;
             },
 

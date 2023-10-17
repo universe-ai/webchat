@@ -19,6 +19,16 @@ export type Presence = {
 export type PresenceState = {
     lastActive: number,
     list: Presence[],
+    isBlurred: boolean,
+};
+
+export type PresenceNotification = {
+    title: string,
+};
+
+export type PresenceControllerParams = ControllerParams & {
+    /** The document title. */
+    title: string,
 };
 
 // Users show as inactive after this threshold.
@@ -28,7 +38,7 @@ export class PresenceController extends Controller {
     protected intervalHandles: ReturnType<typeof setInterval>[] = [];
     protected state: PresenceState;
 
-    constructor(params: ControllerParams) {
+    constructor(protected params: PresenceControllerParams) {
 
         params.threadName = params.threadName ?? "presence";
 
@@ -37,6 +47,7 @@ export class PresenceController extends Controller {
         this.state = {
             list: [],
             lastActive: 0,
+            isBlurred: true,
         };
 
         this.init();
@@ -66,6 +77,43 @@ export class PresenceController extends Controller {
         }
 
         this.state.lastActive = ts;
+
+        this.focusDetected();
+    }
+
+    public blurDetected() {
+        this.state.isBlurred = true;
+    }
+
+    public focusDetected() {
+        if (this.state.isBlurred) {
+            this.state.isBlurred = false;
+            this.notify({title: this.params.title});
+        }
+    }
+
+    /**
+     * Parse global message to see if it is interesting for the PresenceController.
+     */
+    public handleMessage(message: any) {
+        if (message?.action === "NEW_MESSAGE") {
+            if (this.state.isBlurred) {
+                this.notify({title: `⚡ ${this.params.title}`});
+            }
+        }
+    }
+
+    public onNotification(cb: (notification: PresenceNotification) => void): PresenceController {
+        super.onNotification(cb);
+
+        return this;
+    }
+
+    /**
+     *
+     */
+    protected notify(notification: PresenceNotification) {
+        super.notify(notification);
     }
 
     public close() {

@@ -119,6 +119,20 @@ export abstract class Controller {
         return this;
     }
 
+    protected notify(message?: any) {
+        this.triggerEvent("notification", message);
+    }
+
+    /**
+     * Invoked when the controller wants to signal that something
+     * worthy of attention just happened.
+     */
+    public onNotification(cb: (message?: any) => void): Controller {
+        this.hookEvent("notification", cb);
+
+        return this;
+    }
+
     protected hookEvent(name: string, callback: ( (...args: any) => void)) {
         const cbs = this.handlers[name] || [];
         this.handlers[name] = cbs;
