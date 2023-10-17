@@ -9,7 +9,7 @@
                         UniverseAI
                     </h1>
                     <h1 class="mb-1 font-bold text-base text-underrubriker leading-snug truncate">
-                        Decentralized Web Chat
+                        Decentralized Messaging
                     </h1>
                     <div class="h-5">
                     </div>
@@ -189,6 +189,13 @@
                     }, true);
                 });
 
+                window.addEventListener("blur", () => this.state.presenceController?.blurDetected() );
+                window.addEventListener("focus", () => this.state.presenceController?.focusDetected() );
+
+                // Listen generally to messages and react to those of interest,
+                // which are notifications sent from channels about new messages.
+                window.addEventListener("message", (event) => this.state.presenceController?.handleMessage(event.data) );
+
                 this.resetState();
             },
 
@@ -288,8 +295,14 @@
                     connected: true,
                 });
 
-                this.state.presenceController = new this.props.Globals.PresenceController({service: this.state.service});
+                this.state.presenceController = new this.props.Globals.PresenceController({service: this.state.service, title: document.title});
                 this.state.presenceController.onUpdate(() => this.update()).onClose( () => console.error("Presence thread was closed") );
+
+                this.state.presenceController?.onNotification( (notification) => {
+                    if (notification.title) {
+                        document.title = notification.title;
+                    }
+                });
 
                 this.state.channelsController = new this.props.Globals.ChannelsController({service: this.state.service});
                 this.state.channelsController.onUpdate(() => this.update()).onClose( () => console.error("Channels thread was closed") );

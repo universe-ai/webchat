@@ -166,6 +166,10 @@ export class ChannelController extends Controller {
         });
 
         this.update();
+
+        if (event.added.length > 0) {
+            this.notify();
+        }
     }
 
     protected download(node: DataInterface, message: Message, retry: boolean = true) {
