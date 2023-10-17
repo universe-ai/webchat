@@ -103,7 +103,7 @@
 
                 <div each={item in state.channelsController?.getItems()}
                     if={item.data.isDirect}
-                    id="channel_{item.node.getId1().toString("hex")}"
+                    id="channel_{item.id1.toString("hex")}"
                     onclick={ () => this.openChannel(item.id1)}
                     class="flex items-center mb-3 px-4">
 
