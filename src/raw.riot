@@ -9,13 +9,13 @@
       // Replaces all ampersand, less-than, greater-than, and
       // quotes symbols with their corresponding HTML reference.
       setInnerHTMLSanitized() {
-        if(this.props.htmlWithLinks) {
+        if(typeof this.props.htmlWithLinks === "string") {
           // Regex for setting up anchors points to symbols from RFC 3986 (URI specification)
           this.root.innerHTML = this.props.htmlWithLinks.replaceAll('&', "&amp;").replaceAll('<', "&lt;").replaceAll('>', "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;").replaceAll(/((http|https):\/\/[a-z0-9\:\/\?\#\[\]\@\!\$\&\'\(\)\*\+\,\;\=\-\.\_\~\%]+)/ig, "<a href='$1' style='color: blue' target='_blank' rel='noopener noreferrer'>$1</a>")
-        } else if(this.props.html) {
+        } else if(typeof this.props.html === "string") {
           this.root.innerHTML = this.props.html.replaceAll('&', "&amp;").replaceAll('<', "&lt;").replaceAll('>', "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;")
         } else {
-          console.error("Raw component is missing properties. Expected either html or htmlWithLinks. Got: ", this.props)
+          console.error("Raw component is missing properties. Expected either html or htmlWithLinks as typeof string. Got: ", this.props)
         }
       },
       onMounted() {
