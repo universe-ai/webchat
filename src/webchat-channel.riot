@@ -49,6 +49,11 @@
                                 {item.data.uploadInfo.text}
                             </div>
 
+                            <div if={item.data.uploadStreamWriter} class="italic">
+                                <a href="#" onclick={() => item.data.uploadStreamWriter.close()}
+                                    style="color:blue;">Cancel upload</a>
+                            </div>
+
                             <div if={item.data.uploadInfo?.downloadLink} class="italic">
                                 &nbsp;<a href="#" onclick={ () => state.controller.download(item.node, item.data) }
                                     style="color:blue;"
@@ -74,6 +79,11 @@
 
                             <div if={item.data.downloadInfo?.throughput} class="italic">
                                 {item.data.downloadInfo.throughput}
+                            </div>
+
+                            <div if={item.data.downloadStreamWriter} class="italic">
+                                <a href="#" onclick={() => {item.data.downloadCancelled = true; item.data.downloadStreamWriter.close()}}
+                                    style="color:blue;">Cancel download</a>
                             </div>
 
                             <div if={item.data.downloadInfo?.linkText} class="italic">
