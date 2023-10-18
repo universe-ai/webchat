@@ -22,7 +22,7 @@
                 </div>
 
                 <p if={!item.data.hasBlob} class="text-black leading-normal">
-                    <raw htmlWithLinks={ item.data.text }/>
+                    <raw htmlWithLinks={ item.data.text ? item.data.text : "" }/>
                 </p>
 
                 <template if={item.data.hasBlob}>
@@ -195,12 +195,14 @@
 
                 const messageText = messageElement.value;
 
-                const fileElement = this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`);
-                const file = fileElement.files[0];
+                if (messageText) {
+                    const fileElement = this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`);
+                    const file = fileElement.files[0];
 
-                this.clearMessageAndFileInputs();
+                    this.clearMessageAndFileInputs();
 
-                this.state.controller.submitMessage(messageText, file);
+                    this.state.controller.submitMessage(messageText, file);
+                }
             },
 
             clearMessageAndFileInputs(event) {
