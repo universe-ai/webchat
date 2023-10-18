@@ -28,9 +28,10 @@
                 <template if={item.data.hasBlob}>
 
                     <div if={item.data.imgSrc}>
-                        <img src={item.data.imgSrc} alt={item.data.text}
-                            style="max-height:240px;"
-                        />
+                        <a href={item.data.imgSrc} target="_blank">
+                            <img src={item.data.imgSrc} alt={item.data.text}
+                                style="max-height:240px;"/>
+                        </a>
                     </div>
 
                     <div if={item.data.attSrc} class="italic">
