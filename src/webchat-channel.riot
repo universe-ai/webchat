@@ -151,7 +151,20 @@
             onMounted(props, state) {
                 // Register <ENTER> key press as shortcut to submitMessage action
 
-                //dialog = thisRef.$("dialog");
+                this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`).addEventListener("paste", (event) => {
+                    const file = event.clipboardData.files[0];
+
+                    if (file) {
+                        event.preventDefault();
+
+                        if (!confirm(`Upload file ${file.name}?`)) {
+                            return;
+                        }
+
+                        this.state.controller.submitMessage(file.name, file);
+                    }
+                });
+
                 this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`).addEventListener("keypress", (event) => {
                     if(event.key === "Enter") {
                         this.submitMessage(event);
