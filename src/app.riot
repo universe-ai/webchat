@@ -196,6 +196,10 @@
                 // which are notifications sent from channels about new messages.
                 window.addEventListener("message", (event) => this.state.presenceController?.handleMessage(event.data) );
 
+                // Generelly disable drop.
+                window.addEventListener("dragover", function(e) { e.preventDefault() });
+                window.addEventListener("drop", function(e) { e.preventDefault() });
+
                 this.resetState();
             },
 

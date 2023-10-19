@@ -162,6 +162,37 @@
                         this.update();
                     }
                 });
+
+                const messagesList = this.$(`#messagesList_${this.props.item.id1.toString("hex")}`);
+
+                messagesList.ondragenter = function(e) {
+                    messagesList.classList.add("skew-y-1");
+                };
+
+                messagesList.ondragleave = function(e) {
+                    messagesList.classList.remove("skew-y-1");
+                };
+
+                messagesList.ondragover = function(e) {
+                    e.preventDefault();
+                };
+
+                messagesList.ondrop = (e) => {
+                    e.preventDefault();
+
+                    messagesList.classList.remove("skew-y-1");
+
+                    const file = e.dataTransfer.files[0];
+
+                    if (file) {
+                        if (!confirm(`Upload file ${file.name}?`)) {
+                            return;
+                        }
+
+                        this.state.controller.submitMessage(file.name, file);
+                    }
+
+                };
             },
 
             onBeforeUpdate(props, state) {
