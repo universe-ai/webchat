@@ -8,8 +8,8 @@
         "release": "rm -rf ./relese/* ./build && mkdir -p relese && npm run tsc && npm run build-script && npm run build-app-release",
         "tsc": "./node_modules/.bin/tsc",
         "build-script": "./node_modules/.bin/browserify --s module -i ./node_modules/universeai/build/src/datastreamer/FileStreamWriter.js -i ./node_modules/universeai/build/src/datastreamer/FileStreamReader.js -i sqlite3 -i postgresql-client ./build/Globals.js -o ./build/Globals-browser.js",
-        "build-app": "webpack -c ./webpack.config.js && cp -r ./src/index.html ./src/favicon.ico ./src/gfx ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./dist/",
-        "build-app-release": "webpack -c ./webpack.config.release.js && cp ./src/index.html ./src/favicon.ico ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./release/",
+        "build-app": "webpack -c ./webpack.config.js && cp -r ./src/index.html ./src/favicon.ico ./src/gfx ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./dist/ && sed -i.bak \"s/Decentralized Messaging/Decentralized Messaging ($(git rev-parse --short HEAD))/\" dist/main.js",
+        "build-app-release": "webpack -c ./webpack.config.release.js && cp -r ./src/index.html ./src/favicon.ico ./src/gfx ./node_modules/sql.js/dist/sql-wasm.wasm ./node_modules/universeai/build/src/datamodel/decoder/thread-browser.js ./release/ && sed -i.bak \"s/Decentralized Messaging/Decentralized Messaging ($(git rev-parse --short HEAD))/\" release/main.js",
         "lint": "npx eslint ./src"
     },
     "repository": {
