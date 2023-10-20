@@ -23,6 +23,7 @@ export type Message = {
     attSrc: any,
     downloadStreamWriter?: StreamWriterInterface,
     uploadStreamWriter?: StreamWriterInterface,
+    downloadCancelled?: boolean,  // set when cancel is clicked, to avoid a retry.
     downloadInfo?: {linkText?: string, error?: string, throughput?: string},
     uploadInfo?: {text?: string, error?: string, throughput?: string, downloadLink?: string, uploadLink?: string, file?: File},
     objectURL?: any,
@@ -190,6 +191,8 @@ export class ChannelController extends Controller {
         message.downloadStreamWriter = downloadStreamWriter;
 
         downloadStreamWriter.run(0).then( writeData => {
+            delete message.downloadStreamWriter;
+
             if (writeData.status === StreamStatus.RESULT) {
                 const file = new File((downloadStreamWriter as BufferStreamWriter).getBuffers(), filename, { type: mimeType });
 
@@ -205,7 +208,9 @@ export class ChannelController extends Controller {
                 delete message.downloadInfo;
             }
             else {
-                if (!retry) {
+                if (!retry || message.downloadCancelled) {
+
+                    delete message.downloadCancelled;
 
                     message.downloadInfo = {error: `${message.text} could not be downloaded.`, linkText: "Click to try again."};
 
@@ -233,10 +238,17 @@ export class ChannelController extends Controller {
                         value.streamWriter.onStats( stats => {
                             const throughput = this.formatThroughput(stats).throughput;
 
-                            message.downloadInfo = {
-                                error: `Found ${message.text} with peer. Fetching it.`,
-                                throughput,
-                            };
+                            if (stats.written === 0n) {
+                                message.downloadInfo = {
+                                    error: `Waiting to sync ${message.text} from peer.`,
+                                };
+                            }
+                            else {
+                                message.downloadInfo = {
+                                    error: `Syncing ${message.text} from peer to storage.`,
+                                    throughput,
+                                };
+                            }
 
                             this.update();
                         });
@@ -361,7 +373,8 @@ export class ChannelController extends Controller {
                     delete message.uploadInfo;
                 }
                 else {
-                    message.uploadInfo = {text: `File ${file.name} uploaded successfully.`, downloadLink: "Click to download."};
+                    delete message.uploadInfo;
+                    message.downloadInfo = {error: `File ${file.name} uploaded successfully.`, linkText: "Click to download."};
                 }
             }
             else {
