@@ -60,8 +60,10 @@
                         id="presence_{publicKey.toString("hex")}"
                         onclick={showUserInfo}
                         style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        <span if={publicKey.equals(this.state.service.getPublicKey())} class="px-2 text-gray-400 text-sm italic">you</span>
                         {publicKey.toString("hex")}
+                    </span>
+                    <span if={publicKey.equals(this.state.service.getPublicKey())} class="px-2 text-gray-400 text-sm italic">
+                        (you)
                     </span>
                 </div>
 
@@ -75,8 +77,10 @@
                         id="presence_{publicKey.toString("hex")}"
                         onclick={showUserInfo}
                         style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        <span if={publicKey.equals(this.state.service.getPublicKey())} class="px-2 text-gray-400 text-sm italic">you</span>
                         {publicKey.toString("hex")}
+                    </span>
+                    <span if={publicKey.equals(this.state.service.getPublicKey())} class="px-2 text-gray-400 text-sm italic">
+                        (you)
                     </span>
                 </div>
             </div>
