@@ -41,7 +41,7 @@ export type PresenceState = {
 const INACTIVE_THRESHOLD = 1 * 60 * 1000;
 
 export class PresenceController extends Controller {
-    protected pulseInterval?: ReturnType<typeof setInterval>;
+    protected pulseTimer?: ReturnType<typeof setTimeout>;
     protected refreshInterval?: ReturnType<typeof setInterval>;
     protected state: PresenceState;
     protected instanceRandomId: Buffer;
@@ -72,13 +72,13 @@ export class PresenceController extends Controller {
 
     protected postPresence(force: boolean = false) {
         // Clear in case is called outside setTimeout.
-        clearTimeout(this.pulseInterval);
+        clearTimeout(this.pulseTimer);
 
         if (this.isActive() || force) {
             this.thread.post("presence", {data: this.instanceRandomId});
         }
 
-        this.pulseInterval = setTimeout( () => {
+        this.pulseTimer = setTimeout( () => {
             this.postPresence();
         }, INACTIVE_THRESHOLD);
     }
@@ -119,7 +119,7 @@ export class PresenceController extends Controller {
         super.close();
 
         clearInterval(this.refreshInterval);
-        clearInterval(this.pulseInterval);
+        clearTimeout(this.pulseTimer);
 
         this.state.presenceNodes = {}
         this.state.active = [];
