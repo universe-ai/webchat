@@ -49,21 +49,34 @@
                         </svg>
                     </div>
                 </div>
-                <div each={ presence in (state.presenceController?.getPresence() ?? []) } class="flex items-center mb-3 px-4">
-                    <svg if={presence.active} class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20"
+
+                <div each={ publicKey in (state.presenceController?.getActivePresence() ?? []) } class="flex items-center mb-3 px-4">
+                    <svg class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20"
                         style="width: 22px">
                         <circle cx="10" cy="10" r="10">
                     </svg>
-                    <svg if={!presence.active} class="h-2 w-2 stroke-current text-rubriker mr-2" viewBox="0 0 22 22"
+
+                    <span class="text-rubriker opacity-75"
+                        id="presence_{publicKey.toString("hex")}"
+                        onclick={showUserInfo}
+                        style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        <span if={publicKey.equals(this.state.service.getPublicKey())} class="px-2 text-gray-400 text-sm italic">you</span>
+                        {publicKey.toString("hex")}
+                    </span>
+                </div>
+
+                <div each={ publicKey in (state.presenceController?.getInactivePresence() ?? []) } class="flex items-center mb-3 px-4">
+                    <svg class="h-2 w-2 stroke-current text-rubriker mr-2" viewBox="0 0 22 22"
                         style="width: 22px">
                         <circle cx="11" cy="11" r="9" fill="none" stroke-width="3">
                     </svg>
+
                     <span class="text-rubriker opacity-75"
-                        id="presence_{presence.publicKey.toString("hex")}"
+                        id="presence_{publicKey.toString("hex")}"
                         onclick={showUserInfo}
                         style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                        {presence.publicKey.toString("hex")}
-                        <span if={ presence.isSelf} class="px-2 text-gray-400 text-sm italic">you</span>
+                        <span if={publicKey.equals(this.state.service.getPublicKey())} class="px-2 text-gray-400 text-sm italic">you</span>
+                        {publicKey.toString("hex")}
                     </span>
                 </div>
             </div>
@@ -189,14 +202,14 @@
                     }, true);
                 });
 
-                window.addEventListener("blur", () => this.state.presenceController?.blurDetected() );
-                window.addEventListener("focus", () => this.state.presenceController?.focusDetected() );
+                window.addEventListener("blur", () => this.state.notificationsController?.blurDetected() );
+                window.addEventListener("focus", () => this.state.notificationsController?.focusDetected() );
 
                 // Listen generally to messages and react to those of interest,
                 // which are notifications sent from channels about new messages.
-                window.addEventListener("message", (event) => this.state.presenceController?.handleMessage(event.data) );
+                window.addEventListener("message", (event) => this.state.notificationsController?.handleMessage(event.data) );
 
-                // Generelly disable drop.
+                // Disable drop in general.
                 window.addEventListener("dragover", function(e) { e.preventDefault() });
                 window.addEventListener("drop", function(e) { e.preventDefault() });
 
@@ -302,11 +315,16 @@
                 this.state.presenceController = new this.props.Globals.PresenceController({service: this.state.service, title: document.title});
                 this.state.presenceController.onUpdate(() => this.update()).onClose( () => console.error("Presence thread was closed") );
 
-                this.state.presenceController?.onNotification( (notification) => {
+                this.state.notificationsController = new this.props.Globals.NotificationsController(document.title);
+
+                this.state.notificationsController.onNotification( (notification) => {
                     if (notification.title) {
                         document.title = notification.title;
                     }
                 });
+
+                this.state.presenceController.onActive( () => this.state.notificationsController?.focusDetected() );
+                this.state.presenceController.onInactive( () => this.state.notificationsController?.blurDetected() );
 
                 this.state.channelsController = new this.props.Globals.ChannelsController({service: this.state.service});
                 this.state.channelsController.onUpdate(() => this.update()).onClose( () => console.error("Channels thread was closed") );

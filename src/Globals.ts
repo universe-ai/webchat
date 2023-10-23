@@ -15,6 +15,7 @@ import {
     PresenceController,
     ChannelsController,
     ChannelController,
+    NotificationsController,
 } from "./controllers";
 
 export default {
@@ -26,4 +27,5 @@ export default {
     PresenceController,
     ChannelsController,
     ChannelController,
+    NotificationsController,
 }
