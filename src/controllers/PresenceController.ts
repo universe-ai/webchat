@@ -1,6 +1,7 @@
 import {
     NodeInterface,
     TRANSFORMER_EVENT,
+    Hash,
 } from "universeai";
 
 import {
@@ -8,121 +9,121 @@ import {
     ControllerParams,
 } from "./Controller";
 
-export type Presence = {
-    publicKey: Buffer,
-    pingTime: number,
-    active: boolean,
-    isSelf: boolean,
-    node: NodeInterface,
-};
-
 export type PresenceState = {
-    lastActive: number,
-    list: Presence[],
-    isBlurred: boolean,
-};
+    /** Last user activity detected (mouse move, etc). */
+    lastActivityDetected: number,
 
-export type PresenceNotification = {
-    title: string,
-};
+    isActive: boolean,
 
-export type PresenceControllerParams = ControllerParams & {
-    /** The document title. */
-    title: string,
+    /** List of public keys of active users. */
+    active: Buffer[],
+
+    /** List of public keys of inactive users. */
+    inactive: Buffer[],
+
+    /** List of incoming presence nodes which are filtered into active or inactive lists. */
+    presenceNodes: {[hash: string]: {
+        /** Owner public key of the presence node (user). */
+        publicKey: Buffer,
+
+        /** Each node incoming which also updates the presence. */
+        nodes: {[id1: string]: NodeInterface},
+
+        /**
+         * List of timestamp of when nodes came in, maximum two are kept.
+         * The diff of the two timestamp is used to determine if the user is active.
+         */
+        pings: number[],
+    }},
 };
 
 // Users show as inactive after this threshold.
-const INACTIVE_THRESHOLD = 5 * 6 * 1000;
+const INACTIVE_THRESHOLD = 1 * 60 * 1000;
 
 export class PresenceController extends Controller {
-    protected intervalHandles: ReturnType<typeof setInterval>[] = [];
+    protected pulseTimer?: ReturnType<typeof setTimeout>;
+    protected refreshInterval?: ReturnType<typeof setInterval>;
     protected state: PresenceState;
+    protected instanceRandomId: Buffer;
 
-    constructor(protected params: PresenceControllerParams) {
+    constructor(params: ControllerParams) {
 
         params.threadName = params.threadName ?? "presence";
 
         super(params);
 
+        this.instanceRandomId = Buffer.alloc(4);
+        self.crypto.getRandomValues(this.instanceRandomId);
+
         this.state = {
-            list: [],
-            lastActive: 0,
-            isBlurred: true,
+            lastActivityDetected: 0,
+            isActive: false,
+            active: [],
+            inactive: [],
+            presenceNodes: {},
         };
 
         this.init();
     }
 
     protected init() {
-        const handle1 = setInterval(() => this.refreshPresence(), 5000);
-
-        const handle2 = setInterval( () => {
-            if (Date.now() - this.state.lastActive < INACTIVE_THRESHOLD) {
-                this.thread.post("presence");
-            }
-        }, INACTIVE_THRESHOLD)
-
-        this.intervalHandles.push(handle1, handle2);
+        this.refreshInterval = setInterval(() => this.refreshPresence(), INACTIVE_THRESHOLD / 4);
     }
 
-    public getPresence(): Presence[] {
-        return this.state.list;
+    protected postPresence(force: boolean = false) {
+        // Clear in case is called outside setTimeout.
+        clearTimeout(this.pulseTimer);
+
+        if (this.isActive() || force) {
+            this.thread.post("presence", {data: this.instanceRandomId});
+        }
+
+        this.pulseTimer = setTimeout( () => {
+            this.postPresence();
+        }, INACTIVE_THRESHOLD);
     }
 
     public activityDetected() {
-        const ts = Date.now();
+        this.state.lastActivityDetected = Date.now();
 
-        if (ts - this.state.lastActive >= INACTIVE_THRESHOLD) {
-            this.thread.post("presence");
-        }
-
-        this.state.lastActive = ts;
-
-        this.focusDetected();
-    }
-
-    public blurDetected() {
-        this.state.isBlurred = true;
-    }
-
-    public focusDetected() {
-        if (this.state.isBlurred) {
-            this.state.isBlurred = false;
-            this.notify({title: this.params.title});
+        if (!this.isActive()) {
+            this.state.isActive = true;
+            this.triggerEvent("active");
+            this.postPresence(true);
         }
     }
 
-    /**
-     * Parse global message to see if it is interesting for the PresenceController.
-     */
-    public handleMessage(message: any) {
-        if (message?.action === "NEW_MESSAGE") {
-            if (this.state.isBlurred) {
-                this.notify({title: `⚡ ${this.params.title}`});
-            }
-        }
+    public isActive(): boolean {
+        return this.state.isActive;
     }
 
-    public onNotification(cb: (notification: PresenceNotification) => void): PresenceController {
-        super.onNotification(cb);
-
+    public onActive(cb: () => void): PresenceController {
+        this.hookEvent("active", cb);
         return this;
     }
 
-    /**
-     *
-     */
-    protected notify(notification: PresenceNotification) {
-        super.notify(notification);
+    public onInactive(cb: () => void): PresenceController {
+        this.hookEvent("inactive", cb);
+        return this;
+    }
+
+    public getActivePresence(): Buffer[] {
+        return this.state.active;
+    }
+
+    public getInactivePresence(): Buffer[] {
+        return this.state.inactive;
     }
 
     public close() {
         super.close();
 
-        this.intervalHandles.forEach( handle => clearInterval(handle) );
-        this.intervalHandles.length = 0;
+        clearInterval(this.refreshInterval);
+        clearTimeout(this.pulseTimer);
 
-        this.state.list = [];
+        this.state.presenceNodes = {}
+        this.state.active = [];
+        this.state.inactive = [];
     }
 
     protected handleOnChange(event: TRANSFORMER_EVENT) {
@@ -135,59 +136,89 @@ export class PresenceController extends Controller {
                 return;
             }
 
-            const presenceListLength = this.state.list.length;
+            // We hash like this to let the same user run multiple apps simultanously.
+            // The app will populate data with some random bytes.
+            const hashStr = Hash([publicKey, node.getData()]).toString("hex");
 
-            let found = false;
+            const presenceNode = this.state.presenceNodes[hashStr] ?? {
+                publicKey,
+                nodes: {},
+                pings: [],
+            };
 
-            for (let i=0; i<presenceListLength; i++) {
-                const presence = this.state.list[i];
-                if (presence.publicKey.equals(publicKey)) {
-                    if (node.getCreationTime()! > presence.node.getCreationTime()!) {
-                        presence.pingTime = Date.now();
-                        presence.node = node;
-                    }
-                    found = true;
-                }
-            }
+            this.state.presenceNodes[hashStr] = presenceNode;
 
-            if (!found) {
-                this.state.list.push({
-                    publicKey,
-                    pingTime: Date.now(),
-                    isSelf: publicKey.equals(this.service.getPublicKey()),
-                    active: false,
-                    node,
-                });
-            }
+            presenceNode.nodes[node.getId1()!.toString("hex")] = node;
 
+            presenceNode.pings.unshift(Date.now());
         });
 
         event.deleted.forEach( id1 => {
-            this.state.list = this.state.list.filter( presence => !presence.node.getId1()?.equals(id1) );
+            const id1Str = id1.toString("hex");
+
+            for (const hashStr in this.state.presenceNodes) {
+                const presenceNode = this.state.presenceNodes[hashStr];
+
+                if (presenceNode.nodes[id1Str]) {
+                    delete presenceNode.nodes[id1Str];
+                    break;
+                }
+            }
         });
 
         this.refreshPresence();
-
-        this.update();
     }
 
     protected refreshPresence = () => {
-        const presenceListLength = this.state.list.length;
-
-        let updated = false;
-        for (let i=0; i<presenceListLength; i++) {
-            const presence = this.state.list[i];
-
-            const active = Date.now() - presence.pingTime < INACTIVE_THRESHOLD * 1.25;
-
-            if (presence.active !== active) {
-                presence.active = active;
-                updated = true;
+        // Check if going inactive.
+        if (this.isActive()) {
+            if (Date.now() - this.state.lastActivityDetected >= INACTIVE_THRESHOLD) {
+                this.state.isActive = false;
+                this.triggerEvent("inactive");
             }
         }
 
-        if (updated) {
-            this.update();
+        const active: {[id1: string]: Buffer} = {};
+        const inactive: {[id1: string]: Buffer} = {};
+
+        for (const hashStr in this.state.presenceNodes) {
+            const presenceNode = this.state.presenceNodes[hashStr];
+
+            if (Object.values(presenceNode.nodes).length === 0) {
+                delete this.state.presenceNodes[hashStr];
+                continue;
+            }
+
+            let isActive = false;
+
+            if (presenceNode.pings.length === 1) {
+                // In the case there is only a single ping we could count that as active for some time.
+                isActive = Date.now() - presenceNode.pings[0] < INACTIVE_THRESHOLD * 1.5;
+            }
+            else if (presenceNode.pings.length >= 2) {
+                const diff = presenceNode.pings[0] - presenceNode.pings[1];
+
+                // A well spaced out activity pulse indicates a live user, where
+                // a too tight spacing is just syncing old data, and too far out spacing is inactivity.
+                isActive = diff >= INACTIVE_THRESHOLD * 0.5 && Date.now() - presenceNode.pings[0] < INACTIVE_THRESHOLD * 1.5;
+
+                presenceNode.pings.length = 2;
+            }
+
+            if (isActive) {
+                active[presenceNode.publicKey.toString("hex")] = presenceNode.publicKey;
+                delete inactive[presenceNode.publicKey.toString("hex")];
+            }
+            else {
+                if (!active[presenceNode.publicKey.toString("hex")]) {
+                    inactive[presenceNode.publicKey.toString("hex")] = presenceNode.publicKey;
+                }
+            }
         }
+
+        this.state.active   = Object.values(active);
+        this.state.inactive = Object.values(inactive);
+
+        this.update();
     }
 }
