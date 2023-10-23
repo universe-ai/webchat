@@ -31,7 +31,7 @@ export type PresenceState = {
 
         /**
          * List of timestamp of when nodes came in, maximum two are kept.
-         * The diff of the two timestamp is used to determince if the user is active.
+         * The diff of the two timestamp is used to determine if the user is active.
          */
         pings: number[],
     }},
