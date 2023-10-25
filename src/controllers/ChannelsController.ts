@@ -1,4 +1,5 @@
 import {
+    DataInterface,
     TRANSFORMER_EVENT,
 } from "universeai";
 
@@ -15,9 +16,14 @@ export type Channel = {
     isDirect: boolean,
     name: string,
     active: boolean,
+    open: boolean,
 };
 
 export class ChannelsController extends Controller {
+    protected channelControllers: {[nodeId1: string]: ChannelController} = {};
+
+    protected channelNotifications: {[id1: string]: boolean} = {};
+
     constructor(params: ControllerParams) {
 
         params.threadName = params.threadName ?? "channels";
@@ -45,13 +51,52 @@ export class ChannelsController extends Controller {
             data.isDirect = isDirect;
             data.name     = name;
             data.active   = false;
+            data.open     = false;
         });
 
         this.update();
     }
 
+    public getChannelController(node: DataInterface): ChannelController {
+        if (!this.params.Globals) {
+            throw new Error("Missing Globals to be set");
+        }
+
+        const nodeId1 = node.getId1()!;
+
+        const id1Str = nodeId1.toString("hex");
+
+        const item = this.findItem(nodeId1);
+
+        let channelController = this.channelControllers[id1Str];
+
+        if (!channelController) {
+            channelController =
+                new this.params.Globals.ChannelController({
+                    Globals: this.params.Globals,
+                    service: this.params.service,
+                    node,
+                });
+
+            channelController.onNotification( () => {
+                if (item?.data.active === false) {
+                    this.channelNotifications[id1Str] = true;
+
+                    this.update();
+                }
+
+            });
+
+            this.channelControllers[id1Str] = channelController;
+        }
+
+        return channelController;
+    }
+
     public setChannelActive(nodeId1: Buffer) {
         const items = this.threadStreamResponseAPI.getTransformer().getItems();
+
+        const id1Str = nodeId1.toString("hex");
 
         const itemsLength = items.length;
 
@@ -64,6 +109,23 @@ export class ChannelsController extends Controller {
             else {
                 item.data.active = false;
             }
+
+            // Reset notification.
+            this.channelNotifications[id1Str] = false;
+        }
+    }
+
+    public hasNotification(id1: Buffer): boolean {
+        const id1Str = id1.toString("hex");
+
+        return this.channelNotifications[id1Str] ?? false;
+    }
+
+    public openChannel(nodeId1: Buffer) {
+        const item = this.findItem(nodeId1);
+
+        if (item) {
+            item.data.open = true;
         }
     }
 

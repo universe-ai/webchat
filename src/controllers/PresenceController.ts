@@ -115,6 +115,26 @@ export class PresenceController extends Controller {
         return this.state.inactive;
     }
 
+    /**
+     * @param publicKey is hex-string for convenience in UI.
+     */
+    public isPresent(publicKeyStr: string): boolean {
+        const publicKey = Buffer.from(publicKeyStr, "hex");
+
+        const active = this.getActivePresence();
+
+        const activeLength = active.length;
+        for (let i=0; i<activeLength; i++) {
+            const activePublicKey = active[i];
+
+            if (activePublicKey.equals(publicKey)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public close() {
         super.close();
 

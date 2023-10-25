@@ -70,7 +70,7 @@
                 <div each={ publicKey in (state.presenceController?.getInactivePresence() ?? []) } class="flex items-center mb-3 px-4">
                     <svg class="h-2 w-2 stroke-current text-rubriker mr-2" viewBox="0 0 22 22"
                         style="width: 22px">
-                        <circle cx="11" cy="11" r="9" fill="none" stroke-width="3">
+                        <circle cx="10" cy="10" r="10" fill="none" stroke-width="3">
                     </svg>
 
                     <span class="text-rubriker opacity-75"
@@ -124,13 +124,48 @@
                     onclick={ () => this.openChannel(item.id1)}
                     class="flex items-center mb-3 px-4">
 
-                    <svg class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20">
-                        <circle cx="10" cy="10" r="10">
-                    </svg>
 
-                    <span class="text-rubriker opacity-75 {item.data.active ? "font-bold" : ""} text-ellipsis overflow-hidden">
-                        {item.data.name}
-                    </span>
+                    <template if={item.data.open}>
+                        <svg class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20"
+                            if={state.presenceController?.isPresent(item.data.name) &&
+                                !state.channelsController.hasNotification(item.id1) }>
+                            <circle cx="10" cy="10" r="10">
+                        </svg>
+
+                        <svg class="h-2 w-2 stroke-current text-rubriker mr-2" viewBox="0 0 22 22"
+                            if={!state.presenceController?.isPresent(item.data.name) &&
+                                !state.channelsController.hasNotification(item.id1) }>
+                            style="width: 22px">
+                            <circle cx="10" cy="10" r="10" fill="none" stroke-width="3">
+                        </svg>
+
+                        <svg class="h-2 w-2 mr-2 fill-current text-red-500" viewBox="0 0 20 20"
+                            if={state.channelsController.hasNotification(item.id1)}>
+                            <circle cx="10" cy="10" r="10">
+                        </svg>
+
+                        <span class="text-rubriker opacity-75 {item.data.active ? "font-bold" : ""} text-ellipsis overflow-hidden">
+                            {item.data.name}
+                        </span>
+                    </template>
+
+                    <template if={!item.data.open}>
+                        <svg class="h-2 w-2 mr-2 fill-current text-green-500" viewBox="0 0 20 20"
+                            if={state.presenceController?.isPresent(item.data.name)}>
+                            <circle cx="10" cy="10" r="10">
+                        </svg>
+
+                        <svg class="h-2 w-2 stroke-current text-rubriker mr-2" viewBox="0 0 22 22"
+                            if={!state.presenceController?.isPresent(item.data.name)}
+                            style="width: 22px">
+                            <circle cx="10" cy="10" r="10" fill="none" stroke-width="3">
+                        </svg>
+
+                        <span title="Notifications are not shown for unopened channels. Click to open channel."
+                            class="text-rubriker opacity-75 text-ellipsis overflow-hidden italic">
+                            {item.data.name}
+                        </span>
+                    </template>
                 </div>
             </div>
         </div>
@@ -182,9 +217,11 @@
 
             <webchat-channel
                 each={item in state.channelsController?.getItems()}
+                if={item.data.open}
                 class="{item.data.active ? "flex flex-col flex-1 overflow-hidden" : "hidden"}"
                 Globals={props.Globals}
                 service={state.service}
+                controller={state.channelsController?.getChannelController(item.node)}
                 item={item}>
             </webchat-channel>
         </div>
@@ -330,7 +367,12 @@
                 this.state.presenceController.onActive( () => this.state.notificationsController?.focusDetected() );
                 this.state.presenceController.onInactive( () => this.state.notificationsController?.blurDetected() );
 
-                this.state.channelsController = new this.props.Globals.ChannelsController({service: this.state.service});
+                this.state.channelsController =
+                    new this.props.Globals.ChannelsController({
+                        service: this.state.service,
+                        Globals: this.props.Globals,
+                    });
+
                 this.state.channelsController.onUpdate(() => this.update()).onClose( () => console.error("Channels thread was closed") );
             },
 
@@ -363,6 +405,8 @@
             },
 
             openChannel(nodeId1) {
+                this.state.channelsController.openChannel(nodeId1);
+
                 this.state.channelsController.setChannelActive(nodeId1);
 
                 this.update();
