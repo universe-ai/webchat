@@ -8,10 +8,10 @@
         </div>
         <div class="flex items-start mb-4 text-base">
             <button class="border-r-2 border-gray-4 text-blue-600"
-                onclick={()=>this.state.controller.loadHistory()}>Load more
+                onclick={()=>this.props.controller.loadHistory()}>Load more
             </button>
         </div>
-        <div each={ item in state.controller?.getItems() } class="flex items-start mb-4 text-base" id="message_{props.item.id1.toString("hex")}_{item.data.id1}">
+        <div each={ item in props.controller?.getItems() } class="flex items-start mb-4 text-base" id="message_{props.item.id1.toString("hex")}_{item.data.id1}">
             <div class="w-10 h-10 rounded mr-3">
                 <minidenticon-svg username={item.data.publicKey} saturation="60" lightness="50"></minidenticon-svg>
             </div>
@@ -55,13 +55,13 @@
                             </div>
 
                             <div if={item.data.uploadInfo?.downloadLink} class="italic">
-                                &nbsp;<a href="#" onclick={ () => state.controller.download(item.node, item.data) }
+                                &nbsp;<a href="#" onclick={ () => props.controller.download(item.node, item.data) }
                                     style="color:blue;"
                                     rel="noopener noreferrer">{item.data.uploadInfo.downloadLink}</a>
                             </div>
 
                             <div if={item.data.uploadInfo?.uploadLink} class="italic">
-                                &nbsp;<a href="#" onclick={ () => state.controller.reupload(item.node, item.data) }
+                                &nbsp;<a href="#" onclick={ () => props.controller.reupload(item.node, item.data) }
                                     style="color:blue;"
                                     rel="noopener noreferrer">{item.data.uploadInfo.uploadLink}</a>
                             </div>
@@ -87,7 +87,7 @@
                             </div>
 
                             <div if={item.data.downloadInfo?.linkText} class="italic">
-                                &nbsp;<a href="#" onclick={ () => state.controller.download(item.node, item.data) }
+                                &nbsp;<a href="#" onclick={ () => props.controller.download(item.node, item.data) }
                                     style="color:blue;"
                                     rel="noopener noreferrer">{item.data.downloadInfo.linkText}</a>
                             </div>
@@ -133,19 +133,17 @@
             },
 
             onBeforeMount(props, state) {
-                state.controller = new this.props.Globals.ChannelController({Globals: props.Globals, service: props.service, node: props.item.node})
-
-                state.controller.onUpdate((obj) => this.update(obj));
+                props.controller.onUpdate((obj) => this.update(obj));
 
                 // Post message to global PresenceController.
-                state.controller.onNotification( () =>
+                props.controller.onNotification( () =>
                         window.postMessage({action: "NEW_MESSAGE"}));
 
                 state.isPristineScroll = true;
             },
 
             onBeforeUnmount(props, state) {
-                this.state.controller.close();
+                this.props.controller.close();
             },
 
             onMounted(props, state) {
@@ -161,7 +159,7 @@
                             return;
                         }
 
-                        this.state.controller.submitMessage(file.name, file);
+                        this.props.controller.submitMessage(file.name, file);
                     }
                 });
 
@@ -212,7 +210,7 @@
                             return;
                         }
 
-                        this.state.controller.submitMessage(file.name, file);
+                        this.props.controller.submitMessage(file.name, file);
                     }
 
                 };
@@ -220,6 +218,10 @@
 
             onBeforeUpdate(props, state) {
                 const messagesList = this.$(`#messagesList_${this.props.item.id1.toString("hex")}`);
+
+                if (!messagesList) {
+                    return;
+                }
 
                 if (state.isPristineScroll === true) {
                     state.scrollFollow = true;
@@ -248,7 +250,7 @@
 
                 const messageElement = this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`);
 
-                const messageText = messageElement.value;
+                const messageText = messageElement?.value;
 
                 if (messageText) {
                     const fileElement = this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`);
@@ -256,18 +258,25 @@
 
                     this.clearMessageAndFileInputs();
 
-                    this.state.controller.submitMessage(messageText, file);
+                    this.props.controller.submitMessage(messageText, file);
                 }
             },
 
             clearMessageAndFileInputs(event) {
                 const messageElement = this.$(`#chatAreaNewMessage_${this.props.item.id1.toString("hex")}`);
+
+                const fileElement = this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`);
+
+                const fileElementRemove = this.$(`#chatAreaInputFileRemove_${this.props.item.id1.toString("hex")}`);
+
+                if (!messageElement || !fileElement || !fileElementRemove) {
+                    return;
+                }
+
                 messageElement.value = "";
                 messageElement.disabled = false;
 
-                const fileElement = this.$(`#chatAreaInputFile_${this.props.item.id1.toString("hex")}`);
                 fileElement.value = "";
-                const fileElementRemove = this.$(`#chatAreaInputFileRemove_${this.props.item.id1.toString("hex")}`);
                 fileElementRemove.classList.add("hidden");
             },
 
@@ -284,7 +293,7 @@
                 // Add ruler
                 data += "==================================================================================================================\n";
 
-                const items = this.state.controller.getItems();
+                const items = this.props.controller.getItems();
                 for(let i=0; i<items.length; i++) {
                     const itemData = items[i].data;
                     data += itemData.publicKey + "\n";
@@ -303,7 +312,7 @@
                 anchorElement.style = "hidden";
                 document.body.appendChild(anchorElement);
                 anchorElement.href = URL.createObjectURL(file);
-                anchorElement.download = "webchat_" + this.state.controller.getName().name + "_" + (new Date().toISOString().split('T')[0]) + ".txt";
+                anchorElement.download = "webchat_" + this.props.controller.getName().name + "_" + (new Date().toISOString().split('T')[0]) + ".txt";
 
                 // Trigger download and cleanup resources
                 anchorElement.click();
