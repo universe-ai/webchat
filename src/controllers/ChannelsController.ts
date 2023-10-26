@@ -66,7 +66,7 @@ export class ChannelsController extends Controller {
 
         const id1Str = nodeId1.toString("hex");
 
-        const item = this.findItem(nodeId1);
+        const item = this.threadStreamResponseAPI.getTransformer().findItem(nodeId1);
 
         let channelController = this.channelControllers[id1Str];
 
@@ -122,7 +122,7 @@ export class ChannelsController extends Controller {
     }
 
     public openChannel(nodeId1: Buffer) {
-        const item = this.findItem(nodeId1);
+        const item = this.threadStreamResponseAPI.getTransformer().findItem(nodeId1);
 
         if (item) {
             item.data.open = true;
