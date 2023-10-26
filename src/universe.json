@@ -131,6 +131,9 @@
                     "#": "Post license, same for messages and attachments",
                     "jumpPeerPublicKey": "<insert public key>",
                     "#targets": "List of public keys of those we post licenses for"
+                    "#targets": "List of public keys of those we post licenses for. This is typically automatically managed by the application.",
+                    "#validSeconds": "Default license validity time is 90 days for channels created.",
+                    "validSeconds": 7776000
                 }
             }
         }
