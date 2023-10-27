@@ -59,6 +59,8 @@ export class ChannelController extends Controller {
     // this will be inited from the original fetch request.
     protected tail: number;
 
+    protected purgeInterval: ReturnType<typeof setInterval>;
+
     constructor(protected params: ChannelControllerParams) {
 
         params.threadName       = params.threadName ?? "channel";
@@ -80,6 +82,24 @@ export class ChannelController extends Controller {
                 this.targets.push(params.node.getRefId()!);
             }
         }
+
+        // How often to purge old images who are not in view.
+        // Every minute purge images older than 10 minutes.
+        this.purgeInterval = setInterval( () => this.purge(600000), 60000);
+    }
+
+    /**
+     * Call on intervals to purge resources not in the view, of a certain age as deleted.
+     */
+    protected purge(age: number = 0) {
+        this.threadStreamResponseAPI.getTransformer().purge(age).forEach( (message: Message) => {
+            if (message.objectURL) {
+                URL.revokeObjectURL(message.objectURL);
+                delete message.objectURL;
+                delete message.imgSrc;
+                delete message.attSrc;
+            }
+        });
     }
 
     public static GetName(node: DataInterface, publicKey: Buffer): {name: string, isDirect: boolean} {
@@ -106,6 +126,10 @@ export class ChannelController extends Controller {
     }
 
     public close() {
+        clearInterval(this.purgeInterval);
+
+        this.purge();
+
         super.close();
     }
 
@@ -156,14 +180,6 @@ export class ChannelController extends Controller {
                 return;
             }
 
-            if (message.objectURL) {
-                // NOTE: we could leave the ObjectURL here when we add the GC to purge
-                // data objects not in the model anymore.
-                URL.revokeObjectURL(message.objectURL);
-                delete message.objectURL;
-                delete message.imgSrc;
-                delete message.attSrc;
-            }
         });
 
         this.update();
