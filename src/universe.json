@@ -34,6 +34,8 @@
                 "presence": {
                     "contentType": "app/chat/presence",
                     "isPublic": true,
+                    "#": "Set Active state if last presence was within 60 minutes",
+                    "#validSeconds": 3600,
                     "parentId": "0000000000000000000000000000000000000000000000000000000000000001"
                 }
             }
@@ -64,6 +66,9 @@
                     "contentType": "app/chat/channel",
                     "parentId": "0000000000000000000000000000000000000000000000000000000000000002",
                     "isLicensed": true,
+                    "#": "Set channel validity to 416 days",
+                    "#validSeconds": 36000000,
+                    "#isWriteRestricted": true,
                     "#refId": "refId must be set for private channels. It is the public key of the friend"
                 }
             },
@@ -110,6 +115,8 @@
 
                     "contentType": "app/chat/message",
                     "isLicensed": true,
+                    "#": "Set message validity to 41 days",
+                    "#validSeconds": 3600000,
 
                     "#refId": "refId should be set to the id1 of the previous message",
                     "#data": "data is the text of the message sent"
@@ -119,6 +126,8 @@
 
                     "contentType": "app/chat/attachment",
                     "isLicensed": true,
+                    "#": "Set attachment validity to 41 days",
+                    "#validSeconds": 3600000,
 
                     "#refId": "refId should be set to the id1 of the previous message",
                     "#blobLength": "blobLength is the size in bytes of the attachment",
@@ -130,7 +139,6 @@
                 "default": {
                     "#": "Post license, same for messages and attachments",
                     "jumpPeerPublicKey": "<insert public key>",
-                    "#targets": "List of public keys of those we post licenses for"
                     "#targets": "List of public keys of those we post licenses for. This is typically automatically managed by the application.",
                     "#validSeconds": "Default license validity time is 90 days for channels created.",
                     "validSeconds": 7776000
