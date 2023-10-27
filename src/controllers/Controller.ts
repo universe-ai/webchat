@@ -83,23 +83,6 @@ export abstract class Controller {
         this.threadStreamResponseAPI.updateStream(updateStreamParams);
     }
 
-    // TODO move to TransformerCache.
-    protected findItem(id1: Buffer): TransformerItem | undefined {
-        const items = this.threadStreamResponseAPI.getTransformer().getItems();
-
-        const itemsLength = items.length;
-
-        for (let i=0; i<itemsLength; i++) {
-            const item = items[i];
-
-            if (item.id1.equals(id1)) {
-                return item;
-            }
-        }
-
-        return undefined;
-    }
-
     public close() {
         if (this.isClosed) {
             return;
