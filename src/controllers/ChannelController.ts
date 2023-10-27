@@ -94,7 +94,6 @@ export class ChannelController extends Controller {
     protected purge(age: number = 0) {
         this.threadStreamResponseAPI.getTransformer().purge(age).forEach( (message: Message) => {
             if (message.objectURL) {
-                console.log("purging", message.objectURL);
                 URL.revokeObjectURL(message.objectURL);
                 delete message.objectURL;
                 delete message.imgSrc;
