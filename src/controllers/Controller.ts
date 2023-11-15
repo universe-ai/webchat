@@ -1,8 +1,8 @@
 /**
- * Controllers work on Threads who are using Transformers.
- * They provide a model to be used by the UI, either the transformer model (with added data) or its own model.
+ * Controllers work on Threads who are using CRDTs.
+ * They provide a model to be used by the UI, either the CRDT view model (with added data) or its own model.
  *
- * A Controller always runs a streaming fetch request using a transformer.
+ * A Controller always runs a streaming fetch request using a CRDT.
  *
  * The underlaying FetchRequest can be updated to allow for expanding/changing the scope of the model (for example for paging and expanding history).
  */
@@ -12,8 +12,8 @@ import {
     Thread,
     ThreadDefaults,
     ThreadFetchParams,
-    TransformerItem,
-    TRANSFORMER_EVENT,
+    CRDTViewItem,
+    CRDTVIEW_EVENT,
     ThreadStreamResponseAPI,
     UpdateStreamParams,
 } from "universeai";
@@ -52,7 +52,14 @@ export abstract class Controller {
 
         this.thread = this.service.makeThread(this.threadName, params.threadDefaults);
 
-        this.service.addThreadSync(this.thread, params.threadFetchParams);
+        // Note that when we set includeLicenses=3 the Storage will automatically add relevent licenses
+        // to the response and also automatically request licenses to be extended for data matched.
+        // This is a more fine grained approach in requesting licenses than using
+        // query.embed and query.match on licenses.
+        const threadFetchParams = {...params.threadFetchParams};
+        threadFetchParams.query = threadFetchParams.query ?? {};
+        threadFetchParams.query.includeLicenses = 3;
+        this.service.addThreadSync(this.thread, threadFetchParams);
 
         this.threadStreamResponseAPI = this.thread.stream(params.threadFetchParams);
 
@@ -60,18 +67,18 @@ export abstract class Controller {
             .onCancel(() => this.close());
     }
 
-    protected abstract handleOnChange(event: TRANSFORMER_EVENT): void;
+    protected abstract handleOnChange(event: CRDTVIEW_EVENT): void;
 
     /**
-     * Suger over this.threadStreamResponseAPI.getTransformer().getItems().
+     * Suger over this.threadStreamResponseAPI.getCRDTView().getItems().
      */
-    public getItems(): TransformerItem[] {
-        return this.threadStreamResponseAPI.getTransformer().getItems();
+    public getItems(): CRDTViewItem[] {
+        return this.threadStreamResponseAPI.getCRDTView().getItems();
     }
 
     /**
      * When streaming from the thread this function can be used to modify the underlying fetch request,
-     * to change the scope of the data being fed to the transformer model.
+     * to change the scope of the data being fed to the CRDT view model.
      *
      * @throws if closed
      */
@@ -93,7 +100,8 @@ export abstract class Controller {
         this.threadStreamResponseAPI.stopStream();
 
         // Not sure that emptying the model is good idea.
-        //this.threadStreamResponseAPI.getTransformer.empty();
+        // TODO
+        //this.threadStreamResponseAPI.getCRDTView.empty();
 
         this.triggerEvent("close");
     }

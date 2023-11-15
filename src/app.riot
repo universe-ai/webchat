@@ -353,7 +353,7 @@
                     connected: true,
                 });
 
-                this.state.presenceController = new this.props.Globals.PresenceController({service: this.state.service, title: document.title});
+                this.state.presenceController = new this.props.Globals.PresenceController({service: this.state.service});
                 this.state.presenceController.onUpdate(() => this.update()).onClose( () => console.error("Presence thread was closed") );
 
                 this.state.notificationsController = new this.props.Globals.NotificationsController(document.title);

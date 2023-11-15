@@ -26,8 +26,8 @@
                 "orderByStorageTime": true,
                 "descending": true
             },
-            "transform": {
-                "algos": [1],
+            "crdt": {
+                "algo": 1,
                 "tail": -1
             },
             "post": {
@@ -57,8 +57,8 @@
                 ],
                 "depth": 1
             },
-            "transform": {
-                "algos": [1],
+            "crdt": {
+                "algo": 1,
                 "tail": 20
             },
             "post": {
@@ -105,8 +105,8 @@
                 ],
                 "depth": 1
             },
-            "transform": {
-                "algos": [2],
+            "crdt": {
+                "algo": 2,
                 "tail": 30
             },
             "post": {
