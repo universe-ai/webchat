@@ -1,6 +1,6 @@
 import {
     NodeInterface,
-    TRANSFORMER_EVENT,
+    CRDTVIEW_EVENT,
     Hash,
 } from "universeai";
 
@@ -146,9 +146,9 @@ export class PresenceController extends Controller {
         this.state.inactive = [];
     }
 
-    protected handleOnChange(event: TRANSFORMER_EVENT) {
+    protected handleOnChange(event: CRDTVIEW_EVENT) {
         event.added.forEach( id1 => {
-            const node = this.threadStreamResponseAPI.getTransformer().getNode(id1);
+            const node = this.threadStreamResponseAPI.getCRDTView().getNode(id1);
 
             const publicKey = node?.getOwner();
 

@@ -1,7 +1,7 @@
 import {
     DataInterface,
     StreamWriterInterface,
-    TRANSFORMER_EVENT,
+    CRDTVIEW_EVENT,
     BufferStreamWriter,
     StreamStatus,
     WriteStats,
@@ -72,7 +72,7 @@ export class ChannelController extends Controller {
         // init tail from original fetch request.
         const fetchRequest = this.thread.getFetchRequest(params.threadFetchParams);
 
-        this.tail = fetchRequest.transform.tail;
+        this.tail = fetchRequest.crdt.tail;
 
         if (params.node.getRefId()?.length) {
             // This is a private channel
@@ -92,7 +92,7 @@ export class ChannelController extends Controller {
      * Call on intervals to purge resources not in the view, of a certain age as deleted.
      */
     protected purge(age: number = 0) {
-        this.threadStreamResponseAPI.getTransformer().purge(age).forEach( (message: Message) => {
+        this.threadStreamResponseAPI.getCRDTView().purge(age).forEach( (message: Message) => {
             if (message.objectURL) {
                 URL.revokeObjectURL(message.objectURL);
                 delete message.objectURL;
@@ -133,10 +133,10 @@ export class ChannelController extends Controller {
         super.close();
     }
 
-    protected handleOnChange(event: TRANSFORMER_EVENT) {
+    protected handleOnChange(event: CRDTVIEW_EVENT) {
         event.added.forEach( id1 => {
-            const node = this.threadStreamResponseAPI.getTransformer().getNode(id1);
-            const message = this.threadStreamResponseAPI.getTransformer().getData(id1) as Message;
+            const node = this.threadStreamResponseAPI.getCRDTView().getNode(id1);
+            const message = this.threadStreamResponseAPI.getCRDTView().getData(id1) as Message;
 
             if (!node || !message) {
                 return;
@@ -174,7 +174,7 @@ export class ChannelController extends Controller {
         });
 
         event.deleted.forEach( id1 => {
-            const message = this.threadStreamResponseAPI.getTransformer().getData(id1) as Message;
+            const message = this.threadStreamResponseAPI.getCRDTView().getData(id1) as Message;
 
             if (!message) {
                 return;
@@ -413,7 +413,7 @@ export class ChannelController extends Controller {
     public async submitMessage(messageText: string, file: File) {
         let refId: Buffer | undefined;
 
-        const lastItem = this.threadStreamResponseAPI.getTransformer().getLastItem();
+        const lastItem = this.threadStreamResponseAPI.getCRDTView().getLastItem();
 
         refId = lastItem?.node.getId1();
 
@@ -452,7 +452,7 @@ export class ChannelController extends Controller {
             // Pre-create the message with many missing properties, but that is fine.
             const message: any = {};
 
-            this.threadStreamResponseAPI.getTransformer().setData(node.getId1()!, message);
+            this.threadStreamResponseAPI.getCRDTView().setData(node.getId1()!, message);
 
             const uploadStreamWriter = this.createUploadStreamer(file, message, node);
 

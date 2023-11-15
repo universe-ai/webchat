@@ -1,6 +1,6 @@
 import {
     DataInterface,
-    TRANSFORMER_EVENT,
+    CRDTVIEW_EVENT,
 } from "universeai";
 
 import {
@@ -35,12 +35,12 @@ export class ChannelsController extends Controller {
         super.close();
     }
 
-    protected handleOnChange(event: TRANSFORMER_EVENT) {
+    protected handleOnChange(event: CRDTVIEW_EVENT) {
         const publicKey = this.service.getPublicKey();
 
         event.added.forEach( id1 => {
-            const node = this.threadStreamResponseAPI.getTransformer().getNode(id1);
-            const data = this.threadStreamResponseAPI.getTransformer().getData(id1);
+            const node = this.threadStreamResponseAPI.getCRDTView().getNode(id1);
+            const data = this.threadStreamResponseAPI.getCRDTView().getData(id1);
 
             if (!node || !data) {
                 return;
@@ -66,7 +66,7 @@ export class ChannelsController extends Controller {
 
         const id1Str = nodeId1.toString("hex");
 
-        const item = this.threadStreamResponseAPI.getTransformer().findItem(nodeId1);
+        const item = this.threadStreamResponseAPI.getCRDTView().findItem(nodeId1);
 
         let channelController = this.channelControllers[id1Str];
 
@@ -94,7 +94,7 @@ export class ChannelsController extends Controller {
     }
 
     public setChannelActive(nodeId1: Buffer) {
-        const items = this.threadStreamResponseAPI.getTransformer().getItems();
+        const items = this.threadStreamResponseAPI.getCRDTView().getItems();
 
         const id1Str = nodeId1.toString("hex");
 
@@ -122,7 +122,7 @@ export class ChannelsController extends Controller {
     }
 
     public openChannel(nodeId1: Buffer) {
-        const item = this.threadStreamResponseAPI.getTransformer().findItem(nodeId1);
+        const item = this.threadStreamResponseAPI.getCRDTView().findItem(nodeId1);
 
         if (item) {
             item.data.open = true;
@@ -141,7 +141,7 @@ export class ChannelsController extends Controller {
 
         const ourPublicKey = this.service.getPublicKey();
 
-        const items = this.threadStreamResponseAPI.getTransformer().getItems();
+        const items = this.threadStreamResponseAPI.getCRDTView().getItems();
 
         const itemsLength = items.length;
 
