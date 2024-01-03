@@ -11,7 +11,7 @@
                 onclick={()=>this.props.controller.loadHistory()}>Load more
             </button>
         </div>
-        <div each={ item in props.controller?.getItems() } class="flex items-start mb-4 text-base" id="message_{props.item.id1.toString("hex")}_{item.data.id1}">
+        <div each={ item in props.controller?.getItems() } class="flex items-start mb-4 text-base" id="message_{props.item.id1.toString("hex")}_{item.data.id1}" if={(item.data.editedText !== "")}>
             <div class="w-10 h-10 rounded mr-3">
                 <minidenticon-svg username={item.data.publicKey} saturation="60" lightness="50"></minidenticon-svg>
             </div>
@@ -19,17 +19,31 @@
                 <div>
                     <span class="font-bold">{ item.data.publicKey }</span>
                     <span class="text-gray-400 text-xs ml-2">{ item.data.creationTimestamp }</span>
+
+                    <span if={item.node.getOwner()?.equals(props.service.getPublicKey())}>
+                        <a href="#" onclick={ () => props.controller.deleteMessage(item.node) }>🗑</a>
+                    </span>
+
+                    <span if={item.node.getOwner()?.equals(props.service.getPublicKey()) && !item.data.hasBlob}>
+                        <a href="#" onclick={ () => { let editedText = window.prompt("Edit message", item.data.editedText ?? item.data.text); if (!editedText) {return;} props.controller.editMessage(item.node, editedText); }}>✎</a>
+                    </span>
+
+                    <span><a href="#" onclick={ () => props.controller.toggleReaction(item.data, item.node, "thumbsup") }>👍</a></span>
                 </div>
 
                 <p if={!item.data.hasBlob} class="text-black leading-normal">
-                    <raw htmlWithLinks={ item.data.text ? item.data.text : "" }/>
+                    <raw htmlWithLinks={ item.data.editedText ?? item.data.text ?? "" }/>
+                </p>
+                <p each={reaction in Object.keys(item.data.reactions?.reactions ?? {})}>
+                    <a href="#"
+                    class=" {item.data.reactions.reactions[reaction]?.publicKeys.includes(props.service.getPublicKey().toString("hex")) ? "bg-blue-500" : ""} "
+                    onclick={ () => props.controller.toggleReaction(item.data, item.node, reaction)}>👍({item.data.reactions.reactions[reaction].count})</a>
                 </p>
 
-                <template if={item.data.hasBlob}>
-
+                <template if={item.data.hasBlob && item.data.editedText === undefined}>
                     <div if={item.data.imgSrc}>
                         <a href={item.data.imgSrc} target="_blank">
-                            <img src={item.data.imgSrc} alt={item.data.text}
+                            <img src={item.data.imgSrc} alt={item.data.text ?? ""}
                                 style="max-height:240px;"/>
                         </a>
                     </div>
@@ -298,7 +312,7 @@
                     const itemData = items[i].data;
                     data += itemData.publicKey + "\n";
                     data += itemData.creationTimestamp + "\n";
-                    data += itemData.text + "\n";
+                    data += (itemData.editedText ?? itemData.text) + "\n";
                     data += "\n";
                 }
 

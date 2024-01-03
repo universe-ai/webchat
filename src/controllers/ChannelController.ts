@@ -5,6 +5,7 @@ import {
     BufferStreamWriter,
     StreamStatus,
     WriteStats,
+    CRDTMessagesAnnotations,
 } from "universeai";
 
 import {
@@ -17,6 +18,8 @@ export type Message = {
     id1: string,
     creationTimestamp: Date,
     text: string | undefined,
+    editedText: string | undefined,
+    reactions?: {[key: string]: any};
     hasBlob: boolean,
     blobLength: bigint | undefined,
     imgSrc: any,
@@ -134,12 +137,76 @@ export class ChannelController extends Controller {
     }
 
     protected handleOnChange(event: CRDTVIEW_EVENT) {
+        event.updated.forEach( id1 => {
+            const node = this.threadStreamResponseAPI.getCRDTView().getNode(id1);
+
+            const message = this.threadStreamResponseAPI.getCRDTView().getData(id1) as Message;
+
+            if (!node || !message) {
+                return;
+            }
+
+            const annotations = node.getAnnotations();
+
+            if (annotations) {
+                try {
+                    const crdtMessageAnnotaions = new CRDTMessagesAnnotations();
+
+                    crdtMessageAnnotaions.load(annotations);
+
+                    const editNode = crdtMessageAnnotaions.getEditNode();
+
+                    if (editNode) {
+                        const editedText = editNode.getData()?.toString();
+
+                        message.editedText = editedText;
+                    }
+
+                    const reactions = crdtMessageAnnotaions.getReactions();
+
+                    message.reactions = reactions;
+                }
+                catch(e) {
+                    // Fall through.
+                }
+            }
+        });
+
         event.added.forEach( id1 => {
             const node = this.threadStreamResponseAPI.getCRDTView().getNode(id1);
             const message = this.threadStreamResponseAPI.getCRDTView().getData(id1) as Message;
 
             if (!node || !message) {
                 return;
+            }
+
+
+            let editedText: string | undefined;
+            let reactions: any;
+
+            const annotations = node.getAnnotations();
+
+            if (annotations) {
+                try {
+                    const crdtMessageAnnotaions = new CRDTMessagesAnnotations();
+
+                    crdtMessageAnnotaions.load(annotations);
+
+                    const editNode = crdtMessageAnnotaions.getEditNode();
+
+                    if (editNode) {
+                        const editedText = editNode.getData()?.toString();
+
+                        message.editedText = editedText;
+                    }
+
+                    const reactions = crdtMessageAnnotaions.getReactions();
+
+                    message.reactions = reactions;
+                }
+                catch(e) {
+                    // Fall through.
+                }
             }
 
             const text          = node.getData()?.toString();
@@ -152,6 +219,8 @@ export class ChannelController extends Controller {
             message.id1 = id1.toString("hex");
             message.creationTimestamp = timestamp;
             message.text = text;
+            message.editedText = editedText;
+            message.reactions = reactions;
             message.hasBlob = hasBlob;
             message.blobLength = blobLength;
 
@@ -436,7 +505,6 @@ export class ChannelController extends Controller {
                     blobHash,
                     blobLength,
                     data: Buffer.from(filename),
-                    contentType: "app/chat/attachment",
                 });
 
             if (!node) {
@@ -476,5 +544,72 @@ export class ChannelController extends Controller {
                 });
             }
         }
+    }
+
+    public async editMessage(nodeToEdit: DataInterface, messageText: string) {
+        const params = {
+            data: Buffer.from(messageText),
+        };
+
+        const [node] = await this.thread.postEdit(nodeToEdit, "message", params);
+
+        if (!node) {
+            throw new Error("Could not create edit message node");
+        }
+
+        if (node.isLicensed()) {
+            await this.thread.postLicense("default", node, {
+                targets: this.targets,
+            });
+        }
+    }
+
+    public async toggleReaction(message: Message, nodeToReactTo: DataInterface, reaction: string, unreact = false) {
+
+        const publicKey = this.service.getPublicKey().toString("hex");
+
+        let onoff = "react";
+
+        if (message.reactions?.reactions[reaction]?.publicKeys.includes(publicKey)) {
+            onoff = "unreact";
+        }
+
+        const params = {
+            data: Buffer.from(`${onoff}/${reaction}`),
+        };
+
+        const [node] = await this.thread.postReaction(nodeToReactTo, "message", params);
+
+        if (!node) {
+            throw new Error("Could not create reaction message node");
+        }
+
+        if (node.isLicensed()) {
+            await this.thread.postLicense("default", node, {
+                targets: this.targets,
+            });
+        }
+    }
+
+    public async deleteMessage(messageNode: DataInterface) {
+        // First edit the node with an empty string which will effectively hide the node.
+        // This is because actual deletion of nodes is not instant, but editing nodes is instant.
+        //
+        await this.editMessage(messageNode, "");
+
+        // We delay the actual deletion some, just to give the above edit message annotation
+        // a chance to spread before the node is removed. If the node is destroyed directly then
+        // the above notification cannot get distributed.
+        setTimeout( async () => {
+            const destroyNodes = await this.thread.delete(messageNode);
+
+            destroyNodes.forEach( async (node) => {
+                if (node.isLicensed() && node.getLicenseMinDistance() === 0) {
+                    const licenses = await this.thread.postLicense("default", node, {
+                        targets: this.targets,
+                    });
+                }
+            });
+        }, 1000);
     }
 }

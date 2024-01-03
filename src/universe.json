@@ -91,28 +91,25 @@
                                 "cmp": "eq"
                             }
                         ]
-                    },
-                    {
-                        "nodeType": "00040001",
-                        "filters": [
-                            {
-                                "field": "contentType",
-                                "value": "app/chat/attachment",
-                                "cmp": "eq"
-                            }
-                        ]
                     }
                 ],
-                "depth": 1
+                "depth": 2,
+                "preserveTransient": true
             },
             "crdt": {
                 "algo": 2,
-                "tail": 30
+                "tail": 30,
+                "conf": {
+                    "annotations": {
+                        "format": "messages"
+                    }
+                }
             },
             "post": {
                 "message": {
                     "#": "Post a chat message in the thread.",
 
+                    "bubbleTrigger": true,
                     "contentType": "app/chat/message",
                     "isLicensed": true,
                     "#": "Set message validity to 41 days",
@@ -124,7 +121,8 @@
                 "attachment": {
                     "#": "Post a attachment (file or image) in the thread.",
 
-                    "contentType": "app/chat/attachment",
+                    "bubbleTrigger": true,
+                    "contentType": "app/chat/message",
                     "isLicensed": true,
                     "#": "Set attachment validity to 41 days",
                     "#validSeconds": 3600000,
