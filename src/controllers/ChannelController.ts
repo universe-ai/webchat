@@ -6,12 +6,11 @@ import {
     StreamStatus,
     WriteStats,
     CRDTMessagesAnnotations,
+    BrowserUtil,
+    BrowserFileStreamReader,
+    ThreadController,
+    ThreadControllerParams,
 } from "universeai";
-
-import {
-    Controller,
-    ControllerParams,
-} from "./Controller";
 
 export type Message = {
     publicKey: string,
@@ -32,7 +31,7 @@ export type Message = {
     objectURL?: any,
 };
 
-export type ChannelControllerParams = ControllerParams & {
+export type ChannelControllerParams = ThreadControllerParams & {
     /** The channel node. */
     node: DataInterface,
 };
@@ -55,7 +54,7 @@ const MIME_TYPES = {
     "webp": "image/webp",
 };
 
-export class ChannelController extends Controller {
+export class ChannelController extends ThreadController {
     /** License targets. */
     protected targets: Buffer[] = [];
 
@@ -407,7 +406,7 @@ export class ChannelController extends Controller {
 
         this.update({hashing: true});
 
-        const blobHash = await this.Globals?.BrowserUtil.HashFileBrowser(file);
+        const blobHash = await BrowserUtil.HashFileBrowser(file);
 
         this.update({hashing: false});
 
@@ -439,7 +438,7 @@ export class ChannelController extends Controller {
     }
 
     protected createUploadStreamer(file: File, message: Message, node: DataInterface): StreamWriterInterface {
-        const streamReader = new this.Globals!.BrowserFileStreamReader(file);
+        const streamReader = new BrowserFileStreamReader(file);
 
         const uploadStreamWriter = this.thread.getBlobStreamWriter(node.getId1()!, streamReader);
 
@@ -495,7 +494,7 @@ export class ChannelController extends Controller {
             const filename = file.name;
 
             this.update({hashing: true});
-            const blobHash = await this.Globals?.BrowserUtil.HashFileBrowser(file);
+            const blobHash = await BrowserUtil.HashFileBrowser(file);
             this.update({hashing: false});
 
             const blobLength = BigInt(file.size);

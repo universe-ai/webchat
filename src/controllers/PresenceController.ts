@@ -2,12 +2,9 @@ import {
     NodeInterface,
     CRDTVIEW_EVENT,
     Hash,
+    ThreadController,
+    ThreadControllerParams,
 } from "universeai";
-
-import {
-    Controller,
-    ControllerParams,
-} from "./Controller";
 
 export type PresenceState = {
     /** Last user activity detected (mouse move, etc). */
@@ -40,13 +37,13 @@ export type PresenceState = {
 // Users show as inactive after this threshold.
 const INACTIVE_THRESHOLD = 1 * 60 * 1000;
 
-export class PresenceController extends Controller {
+export class PresenceController extends ThreadController {
     protected pulseTimer?: ReturnType<typeof setTimeout>;
     protected refreshInterval?: ReturnType<typeof setInterval>;
     protected state: PresenceState;
     protected instanceRandomId: Buffer;
 
-    constructor(params: ControllerParams) {
+    constructor(params: ThreadControllerParams) {
 
         params.threadName = params.threadName ?? "presence";
 

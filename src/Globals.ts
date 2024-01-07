@@ -19,8 +19,6 @@ import {
 } from "./controllers";
 
 export default {
-    BrowserUtil,
-    BrowserFileStreamReader,
     Service,
     Universe,
     ParseUtil,

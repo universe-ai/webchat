@@ -1,12 +1,9 @@
 import {
     DataInterface,
     CRDTVIEW_EVENT,
+    ThreadController,
+    ThreadControllerParams,
 } from "universeai";
-
-import {
-    Controller,
-    ControllerParams,
-} from "./Controller";
 
 import {
     ChannelController,
@@ -19,12 +16,12 @@ export type Channel = {
     open: boolean,
 };
 
-export class ChannelsController extends Controller {
+export class ChannelsController extends ThreadController {
     protected channelControllers: {[nodeId1: string]: ChannelController} = {};
 
     protected channelNotifications: {[id1: string]: boolean} = {};
 
-    constructor(params: ControllerParams) {
+    constructor(params: ThreadControllerParams) {
 
         params.threadName = params.threadName ?? "channels";
 
@@ -58,10 +55,6 @@ export class ChannelsController extends Controller {
     }
 
     public getChannelController(node: DataInterface): ChannelController {
-        if (!this.params.Globals) {
-            throw new Error("Missing Globals to be set");
-        }
-
         const nodeId1 = node.getId1()!;
 
         const id1Str = nodeId1.toString("hex");
@@ -72,8 +65,7 @@ export class ChannelsController extends Controller {
 
         if (!channelController) {
             channelController =
-                new this.params.Globals.ChannelController({
-                    Globals: this.params.Globals,
+                new ChannelController({
                     service: this.params.service,
                     node,
                 });
